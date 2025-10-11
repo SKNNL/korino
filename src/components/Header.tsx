@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Package, PlusCircle, User, Search } from "lucide-react";
+import { Package, PlusCircle, Search } from "lucide-react";
 import SearchModal from "./SearchModal";
+import ProfileMenu from "./ProfileMenu";
 
 const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -37,9 +38,7 @@ const Header = () => {
               <PlusCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Proposer un objet</span>
             </Button>
-            <Button variant="ghost" size="icon">
-              <User className="h-5 w-5" />
-            </Button>
+            <ProfileMenu />
           </div>
         </div>
       </header>
