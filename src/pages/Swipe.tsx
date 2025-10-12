@@ -1,0 +1,229 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, useMotionValue, useTransform } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { X, Heart, ArrowLeft, Sparkles } from "lucide-react";
+import Header from "@/components/Header";
+import MatchModal from "@/components/MatchModal";
+
+interface Item {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  image_url: string;
+  location: string;
+  user_id: string;
+}
+
+const Swipe = () => {
+  const [items, setItems] = useState<Item[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [user, setUser] = useState<any>(null);
+  const [showMatch, setShowMatch] = useState(false);
+  const [matchedItem, setMatchedItem] = useState<Item | null>(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-200, 200], [-25, 25]);
+  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
+
+  useEffect(() => {
+    checkUser();
+  }, []);
+
+  const checkUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+    setUser(session.user);
+    loadItems(session.user.id);
+  };
+
+  const loadItems = async (userId: string) => {
+    // Récupérer les items que l'utilisateur n'a pas encore swipé
+    const { data: swipedItems } = await supabase
+      .from("swipes")
+      .select("item_id")
+      .eq("user_id", userId);
+
+    const swipedIds = swipedItems?.map(s => s.item_id) || [];
+
+    const { data, error } = await supabase
+      .from("items")
+      .select("*")
+      .neq("user_id", userId)
+      .not("id", "in", `(${swipedIds.join(",") || "null"})`)
+      .eq("is_active", true)
+      .limit(20);
+
+    if (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les objets",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setItems(data || []);
+  };
+
+  const handleSwipe = async (direction: "left" | "right") => {
+    if (!user || currentIndex >= items.length) return;
+
+    const currentItem = items[currentIndex];
+
+    // Enregistrer le swipe
+    const { error } = await supabase
+      .from("swipes")
+      .insert({
+        user_id: user.id,
+        item_id: currentItem.id,
+        swipe_direction: direction,
+      });
+
+    if (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'enregistrer votre choix",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Si c'est un like, vérifier s'il y a un match
+    if (direction === "right") {
+      // Écouter les nouveaux matches
+      const { data: newMatches } = await supabase
+        .from("matches")
+        .select("*, item1:item1_id(*), item2:item2_id(*)")
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (newMatches && newMatches.length > 0) {
+        const match = newMatches[0];
+        const justCreated = new Date(match.created_at).getTime() > Date.now() - 2000;
+        
+        if (justCreated) {
+          setMatchedItem(currentItem);
+          setShowMatch(true);
+        }
+      }
+    }
+
+    // Passer à l'item suivant
+    setCurrentIndex(prev => prev + 1);
+  };
+
+  const handleDragEnd = (_: any, info: any) => {
+    if (info.offset.x > 100) {
+      handleSwipe("right");
+    } else if (info.offset.x < -100) {
+      handleSwipe("left");
+    }
+  };
+
+  if (!user) {
+    return null;
+  }
+
+  const currentItem = items[currentIndex];
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <Button variant="ghost" onClick={() => navigate("/")} className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Retour
+            </Button>
+            <h1 className="text-2xl font-bold">Découvrir</h1>
+            <div className="w-20" />
+          </div>
+
+          {!currentItem ? (
+            <div className="text-center py-20">
+              <Sparkles className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h2 className="text-2xl font-bold mb-2">Plus d'objets disponibles</h2>
+              <p className="text-muted-foreground mb-6">
+                Revenez plus tard pour découvrir de nouveaux objets
+              </p>
+              <Button onClick={() => navigate("/")}>
+                Retour à l'accueil
+              </Button>
+            </div>
+          ) : (
+            <div className="relative h-[600px]">
+              <motion.div
+                className="absolute inset-0 cursor-grab active:cursor-grabbing"
+                style={{ x, rotate, opacity }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="h-full rounded-2xl overflow-hidden shadow-2xl bg-card">
+                  <div className="h-2/3 bg-muted relative">
+                    <img
+                      src={currentItem.image_url || "/placeholder.svg"}
+                      alt={currentItem.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-4 right-4 bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm font-medium">
+                      {currentItem.category}
+                    </div>
+                  </div>
+                  
+                  <div className="h-1/3 p-6">
+                    <h2 className="text-2xl font-bold mb-2">{currentItem.title}</h2>
+                    <p className="text-muted-foreground mb-3 line-clamp-2">
+                      {currentItem.description}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      📍 {currentItem.location}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Boutons de swipe */}
+              <div className="absolute -bottom-20 left-0 right-0 flex justify-center gap-8">
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-16 w-16 rounded-full shadow-lg hover:scale-110 transition-transform"
+                  onClick={() => handleSwipe("left")}
+                >
+                  <X className="h-8 w-8 text-destructive" />
+                </Button>
+                <Button
+                  size="icon"
+                  className="h-16 w-16 rounded-full shadow-lg hover:scale-110 transition-transform"
+                  onClick={() => handleSwipe("right")}
+                >
+                  <Heart className="h-8 w-8" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <MatchModal
+        open={showMatch}
+        onClose={() => setShowMatch(false)}
+        item={matchedItem}
+      />
+    </div>
+  );
+};
+
+export default Swipe;

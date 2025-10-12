@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Package, PlusCircle, Search } from "lucide-react";
+import { Package, PlusCircle, Search, Heart } from "lucide-react";
 import SearchModal from "./SearchModal";
 import ProfileMenu from "./ProfileMenu";
 
@@ -35,6 +35,12 @@ const Header = () => {
             >
               <Search className="h-5 w-5" />
             </Button>
+            <Link to="/swipe">
+              <Button variant="default" size="sm" className="gap-2">
+                <Heart className="h-4 w-4" />
+                <span className="hidden sm:inline">Swiper</span>
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" className="gap-2">
               <PlusCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Proposer un objet</span>

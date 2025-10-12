@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import CommentCaMarche from "./pages/CommentCaMarche";
+import Auth from "./pages/Auth";
+import Swipe from "./pages/Swipe";
+import Matches from "./pages/Matches";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -18,6 +21,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/comment-ca-marche" element={<CommentCaMarche />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/swipe" element={<Swipe />} />
+          <Route path="/matches" element={<Matches />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
