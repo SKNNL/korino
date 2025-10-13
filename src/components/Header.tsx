@@ -5,8 +5,18 @@ import { Package, PlusCircle, Search, Heart } from "lucide-react";
 import SearchModal from "./SearchModal";
 import ProfileMenu from "./ProfileMenu";
 
-const Header = () => {
+const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearchChange?: (query: string) => void } = {}) => {
   const [searchOpen, setSearchOpen] = useState(false);
+
+  const handleSearchSubmit = (query: string) => {
+    if (onSearchChange) {
+      onSearchChange(query);
+      setSearchOpen(false);
+      // Scroll to items section
+      const itemsSection = document.querySelector('section.container');
+      itemsSection?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <>
@@ -52,7 +62,7 @@ const Header = () => {
         </div>
       </header>
 
-      <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+      <SearchModal open={searchOpen} onOpenChange={setSearchOpen} onSearch={handleSearchSubmit} />
     </>
   );
 };

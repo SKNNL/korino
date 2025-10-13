@@ -12,13 +12,33 @@ import { Badge } from "@/components/ui/badge";
 interface SearchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSearch?: (query: string) => void;
 }
 
 const popularSearches = ["Livres", "Jouets", "Cuisine", "Vêtements", "Décoration"];
 const recentSearches = ["Jeux de société", "Romans fantasy", "Ustensiles"];
 
-const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
+const SearchModal = ({ open, onOpenChange, onSearch }: SearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = () => {
+    if (onSearch && searchQuery.trim()) {
+      onSearch(searchQuery);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const handleBadgeClick = (search: string) => {
+    setSearchQuery(search);
+    if (onSearch) {
+      onSearch(search);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -34,6 +54,7 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
               placeholder="Rechercher un objet à échanger..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleKeyPress}
               className="pl-10 h-14 text-lg border-border"
               autoFocus
             />
@@ -52,7 +73,7 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
                       key={search}
                       variant="secondary"
                       className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                      onClick={() => setSearchQuery(search)}
+                      onClick={() => handleBadgeClick(search)}
                     >
                       {search}
                     </Badge>
@@ -71,7 +92,7 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
                       key={search}
                       variant="outline"
                       className="cursor-pointer hover:bg-muted transition-colors"
-                      onClick={() => setSearchQuery(search)}
+                      onClick={() => handleBadgeClick(search)}
                     >
                       {search}
                     </Badge>
@@ -81,12 +102,6 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
             </div>
           )}
 
-          {searchQuery && (
-            <div className="py-8 text-center text-muted-foreground">
-              <p>Recherche pour "{searchQuery}"...</p>
-              <p className="text-sm mt-2">Cette fonctionnalité sera bientôt disponible</p>
-            </div>
-          )}
         </div>
       </DialogContent>
     </Dialog>

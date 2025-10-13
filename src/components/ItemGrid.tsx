@@ -69,12 +69,21 @@ const mockItems = [
   },
 ];
 
-const ItemGrid = () => {
+const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  const filteredItems = selectedCategory === "all" 
+  let filteredItems = selectedCategory === "all" 
     ? mockItems 
     : mockItems.filter(item => item.categoryId === selectedCategory);
+
+  if (searchQuery && searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    filteredItems = filteredItems.filter(item => 
+      item.title.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query) ||
+      item.category.toLowerCase().includes(query)
+    );
+  }
 
   return (
     <section className="container mx-auto px-4 py-12">

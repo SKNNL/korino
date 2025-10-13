@@ -1,9 +1,24 @@
+import { useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-exchange.jpg";
 
-const Hero = () => {
+const Hero = ({ onSearch }: { onSearch?: (query: string) => void }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = () => {
+    if (onSearch && searchQuery.trim()) {
+      onSearch(searchQuery);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5">
       <div className="container mx-auto px-4 py-16 md:py-24">
@@ -23,9 +38,12 @@ const Hero = () => {
                 <Input 
                   placeholder="Rechercher un objet..." 
                   className="pl-10 h-12 border-border bg-card"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={handleKeyPress}
                 />
               </div>
-              <Button size="lg" className="h-12">
+              <Button size="lg" className="h-12" onClick={handleSearch}>
                 Rechercher
               </Button>
             </div>
