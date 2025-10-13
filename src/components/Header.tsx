@@ -41,10 +41,12 @@ const Header = () => {
                 <span className="hidden sm:inline">Swiper</span>
               </Button>
             </Link>
-            <Button variant="outline" size="sm" className="gap-2">
-              <PlusCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Proposer un objet</span>
-            </Button>
+            <Link to="/add-item">
+              <Button variant="outline" size="sm" className="gap-2">
+                <PlusCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Proposer un objet</span>
+              </Button>
+            </Link>
             <ProfileMenu />
           </div>
         </div>

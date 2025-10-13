@@ -8,6 +8,7 @@ import CommentCaMarche from "./pages/CommentCaMarche";
 import Auth from "./pages/Auth";
 import Swipe from "./pages/Swipe";
 import Matches from "./pages/Matches";
+import AddItem from "./pages/AddItem";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/swipe" element={<Swipe />} />
           <Route path="/matches" element={<Matches />} />
+          <Route path="/add-item" element={<AddItem />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
