@@ -27,6 +27,9 @@ const AddItem = () => {
     description: "",
     category: "",
     location: "",
+    brand: "",
+    condition: "",
+    price_range: "",
   });
 
   const categories = [
@@ -39,6 +42,24 @@ const AddItem = () => {
     "Sport",
     "Décoration",
     "Autre",
+  ];
+
+  const conditions = [
+    { value: "neuf", label: "Neuf" },
+    { value: "tres_bon_etat", label: "Très bon état" },
+    { value: "bon_etat", label: "Bon état" },
+    { value: "etat_correct", label: "État correct" },
+    { value: "pour_pieces", label: "Pour pièces" },
+  ];
+
+  const priceRanges = [
+    { value: "gratuit", label: "Gratuit" },
+    { value: "1_10", label: "€ (1-10€)" },
+    { value: "10_30", label: "€€ (10-30€)" },
+    { value: "30_50", label: "€€€ (30-50€)" },
+    { value: "50_100", label: "€€€€ (50-100€)" },
+    { value: "100_200", label: "€€€€€ (100-200€)" },
+    { value: "200_plus", label: "€€€€€€ (200€+)" },
   ];
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,6 +120,9 @@ const AddItem = () => {
         category: formData.category,
         location: formData.location,
         image_url: imageUrl,
+        brand: formData.brand || null,
+        condition: formData.condition || null,
+        price_range: formData.price_range || null,
       });
 
       if (insertError) throw insertError;
@@ -223,6 +247,63 @@ const AddItem = () => {
               placeholder="Décrivez votre objet..."
               rows={4}
             />
+          </div>
+
+          {/* Brand */}
+          <div>
+            <Label htmlFor="brand">Marque (optionnel)</Label>
+            <Input
+              id="brand"
+              value={formData.brand}
+              onChange={(e) =>
+                setFormData({ ...formData, brand: e.target.value })
+              }
+              placeholder="Ex: Nike, Apple, Ikea..."
+            />
+          </div>
+
+          {/* Condition */}
+          <div>
+            <Label htmlFor="condition">État (optionnel)</Label>
+            <Select
+              value={formData.condition}
+              onValueChange={(value) =>
+                setFormData({ ...formData, condition: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner l'état" />
+              </SelectTrigger>
+              <SelectContent>
+                {conditions.map((cond) => (
+                  <SelectItem key={cond.value} value={cond.value}>
+                    {cond.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Price Range */}
+          <div>
+            <Label htmlFor="price_range">Gamme de prix (optionnel)</Label>
+            <Select
+              value={formData.price_range}
+              onValueChange={(value) =>
+                setFormData({ ...formData, price_range: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner le prix" />
+              </SelectTrigger>
+              <SelectContent>
+                {priceRanges.map((range) => (
+                  <SelectItem key={range.value} value={range.value}>
+                    {range.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Location */}
