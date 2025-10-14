@@ -9,6 +9,10 @@ import Auth from "./pages/Auth";
 import Swipe from "./pages/Swipe";
 import Matches from "./pages/Matches";
 import AddItem from "./pages/AddItem";
+import Profile from "./pages/Profile";
+import MyItems from "./pages/MyItems";
+import Favorites from "./pages/Favorites";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +30,10 @@ const App = () => (
           <Route path="/swipe" element={<Swipe />} />
           <Route path="/matches" element={<Matches />} />
           <Route path="/add-item" element={<AddItem />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/my-items" element={<MyItems />} />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
