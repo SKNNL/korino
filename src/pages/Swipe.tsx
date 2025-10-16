@@ -45,32 +45,39 @@ const Swipe = () => {
   };
 
   const loadItems = async (userId: string) => {
-    // Récupérer les items que l'utilisateur n'a pas encore swipé
-    const { data: swipedItems } = await supabase
-      .from("swipes")
-      .select("item_id")
-      .eq("user_id", userId);
+    try {
+      // Récupérer les items que l'utilisateur n'a pas encore swipé
+      const { data: swipedItems } = await supabase
+        .from("swipes")
+        .select("item_id")
+        .eq("user_id", userId);
 
-    const swipedIds = swipedItems?.map(s => s.item_id) || [];
+      const swipedIds = swipedItems?.map(s => s.item_id) || [];
 
-    const { data, error } = await supabase
-      .from("items")
-      .select("*")
-      .neq("user_id", userId)
-      .not("id", "in", `(${swipedIds.join(",") || "null"})`)
-      .eq("is_active", true)
-      .limit(20);
+      let query = supabase
+        .from("items")
+        .select("*")
+        .neq("user_id", userId)
+        .eq("is_active", true)
+        .limit(50); // Load more items for better experience
 
-    if (error) {
+      // Exclude already swiped items
+      if (swipedIds.length > 0) {
+        query = query.not("id", "in", `(${swipedIds.join(",")})`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setItems(data || []);
+    } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de charger les objets",
         variant: "destructive",
       });
-      return;
     }
-
-    setItems(data || []);
   };
 
   const handleSwipe = async (direction: "left" | "right") => {

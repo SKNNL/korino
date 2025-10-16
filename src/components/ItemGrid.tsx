@@ -1,89 +1,85 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ItemCard from "./ItemCard";
 import CategoryFilter from "./CategoryFilter";
-import itemToysImage from "@/assets/item-toys.jpg";
-import itemBooksImage from "@/assets/item-books.jpg";
-import itemKitchenImage from "@/assets/item-kitchen.jpg";
-import itemClothesImage from "@/assets/item-clothes.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "./ui/button";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
-const mockItems = [
-  {
-    id: 1,
-    title: "Lot de jouets pour enfants",
-    description: "Jouets en très bon état, mes enfants ne les utilisent plus. Parfait pour 3-6 ans.",
-    category: "Jouets",
-    categoryId: "toys",
-    location: "Paris 11ème",
-    date: "Il y a 2 jours",
-    image: itemToysImage,
-  },
-  {
-    id: 2,
-    title: "Collection de livres fantasy",
-    description: "Une vingtaine de livres de fantasy en excellent état. À échanger contre des romans policiers.",
-    category: "Livres",
-    categoryId: "books",
-    location: "Lyon 3ème",
-    date: "Il y a 1 jour",
-    image: itemBooksImage,
-  },
-  {
-    id: 3,
-    title: "Ustensiles de cuisine",
-    description: "Set complet d'ustensiles de cuisine, peu utilisés. Idéal pour équiper une première cuisine.",
-    category: "Cuisine",
-    categoryId: "kitchen",
-    location: "Marseille",
-    date: "Il y a 3 jours",
-    image: itemKitchenImage,
-  },
-  {
-    id: 4,
-    title: "Vêtements d'été",
-    description: "Vêtements femme taille M, collection été, très bon état.",
-    category: "Vêtements",
-    categoryId: "clothes",
-    location: "Toulouse",
-    date: "Il y a 5 heures",
-    image: itemClothesImage,
-  },
-  {
-    id: 5,
-    title: "Livres de cuisine",
-    description: "10 livres de recettes variées, cuisine française et internationale.",
-    category: "Livres",
-    categoryId: "books",
-    location: "Nantes",
-    date: "Il y a 1 jour",
-    image: itemBooksImage,
-  },
-  {
-    id: 6,
-    title: "Jeux de société",
-    description: "Plusieurs jeux de société en parfait état pour soirées en famille.",
-    category: "Jouets",
-    categoryId: "toys",
-    location: "Bordeaux",
-    date: "Il y a 4 jours",
-    image: itemToysImage,
-  },
-];
+const ITEMS_PER_PAGE = 12;
+
+interface Item {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  location: string;
+  image_url: string;
+  created_at: string;
+}
 
 const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  let filteredItems = selectedCategory === "all" 
-    ? mockItems 
-    : mockItems.filter(item => item.categoryId === selectedCategory);
+  useEffect(() => {
+    loadItems();
+  }, [selectedCategory, currentPage]);
 
-  if (searchQuery && searchQuery.trim()) {
-    const query = searchQuery.toLowerCase();
-    filteredItems = filteredItems.filter(item => 
-      item.title.toLowerCase().includes(query) ||
-      item.description.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query)
-    );
-  }
+  useEffect(() => {
+    // Reset to page 1 when search changes
+    setCurrentPage(1);
+    loadItems();
+  }, [searchQuery]);
+
+  const loadItems = async () => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from("items")
+        .select("*", { count: "exact" })
+        .eq("is_active", true);
+
+      // Apply category filter
+      if (selectedCategory !== "all") {
+        query = query.eq("category", selectedCategory);
+      }
+
+      // Apply search filter
+      if (searchQuery && searchQuery.trim()) {
+        const search = searchQuery.toLowerCase();
+        query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+      }
+
+      // Apply pagination
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      setItems(data || []);
+      setTotalCount(count || 0);
+    } catch (error) {
+      console.error("Error loading items:", error);
+      setItems([]);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setCurrentPage(1); // Reset to first page when changing category
+  };
 
   return (
     <section className="container mx-auto px-4 py-12">
@@ -91,25 +87,88 @@ const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
         <div className="space-y-2">
           <h2 className="text-3xl font-bold">Objets disponibles</h2>
           <p className="text-muted-foreground">
-            Parcourez les objets proposés par notre communauté
+            {totalCount} {totalCount > 1 ? "objets" : "objet"} {selectedCategory !== "all" ? `dans cette catégorie` : "au total"}
           </p>
         </div>
         
         <CategoryFilter 
           selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+          onCategoryChange={handleCategoryChange}
         />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredItems.map((item) => (
-            <ItemCard key={item.id} {...item} />
-          ))}
-        </div>
-        
-        {filteredItems.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Aucun objet dans cette catégorie pour le moment.</p>
+
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[400px]">
+              {items.map((item) => (
+                <ItemCard key={item.id} {...item} />
+              ))}
+            </div>
+            
+            {items.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  {searchQuery 
+                    ? "Aucun objet ne correspond à votre recherche." 
+                    : "Aucun objet dans cette catégorie pour le moment."}
+                </p>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-8">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    // Show pages around current page
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-10"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

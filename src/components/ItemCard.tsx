@@ -3,21 +3,44 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar } from "lucide-react";
 
+// Helper function to format date
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const diffInDays = Math.floor(diffInHours / 24);
+
+  if (diffInHours < 1) return "Il y a quelques minutes";
+  if (diffInHours < 24) return `Il y a ${diffInHours} heure${diffInHours > 1 ? 's' : ''}`;
+  if (diffInDays < 7) return `Il y a ${diffInDays} jour${diffInDays > 1 ? 's' : ''}`;
+  if (diffInDays < 30) return `Il y a ${Math.floor(diffInDays / 7)} semaine${Math.floor(diffInDays / 7) > 1 ? 's' : ''}`;
+  return `Il y a ${Math.floor(diffInDays / 30)} mois`;
+};
+
 interface ItemCardProps {
   title: string;
   description: string;
   category: string;
   location: string;
-  date: string;
-  image: string;
+  date?: string;
+  image?: string;
+  image_url?: string;
+  created_at?: string;
 }
 
-const ItemCard = ({ title, description, category, location, date, image }: ItemCardProps) => {
+const ItemCard = ({ title, description, category, location, date, image, image_url, created_at }: ItemCardProps) => {
+  // Use image_url from database or fallback to image prop or placeholder
+  const displayImage = image_url || image || "/placeholder.svg";
+  
+  // Format date - use date prop or format created_at
+  const displayDate = date || (created_at ? formatDate(created_at) : "Récemment");
+  
   return (
     <Card className="group overflow-hidden border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
       <div className="aspect-square overflow-hidden bg-muted">
         <img 
-          src={image} 
+          src={displayImage} 
           alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
@@ -42,7 +65,7 @@ const ItemCard = ({ title, description, category, location, date, image }: ItemC
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            <span>{date}</span>
+            <span>{displayDate}</span>
           </div>
         </div>
       </CardContent>
