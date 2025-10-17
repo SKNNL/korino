@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { X, Heart, ArrowLeft, Sparkles } from "lucide-react";
 import Header from "@/components/Header";
 import MatchModal from "@/components/MatchModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Item {
   id: string;
@@ -24,6 +26,9 @@ const Swipe = () => {
   const [user, setUser] = useState<any>(null);
   const [showMatch, setShowMatch] = useState(false);
   const [matchedItem, setMatchedItem] = useState<Item | null>(null);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [pendingSwipeItem, setPendingSwipeItem] = useState<Item | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const x = useMotionValue(0);
@@ -85,12 +90,24 @@ const Swipe = () => {
 
     const currentItem = items[currentIndex];
 
+    // Si c'est un like à droite, proposer d'envoyer un message
+    if (direction === "right") {
+      setPendingSwipeItem(currentItem);
+      setShowMessageDialog(true);
+      return;
+    }
+
+    // Pour les swipes à gauche, enregistrer directement
+    await recordSwipe(currentItem, direction);
+  };
+
+  const recordSwipe = async (item: Item, direction: "left" | "right", message?: string) => {
     // Enregistrer le swipe
     const { error } = await supabase
       .from("swipes")
       .insert({
         user_id: user.id,
-        item_id: currentItem.id,
+        item_id: item.id,
         swipe_direction: direction,
       });
 
@@ -103,9 +120,24 @@ const Swipe = () => {
       return;
     }
 
-    // Si c'est un like, vérifier s'il y a un match
+    // Si un message est fourni avec le like
+    if (direction === "right" && message) {
+      const { error: msgError } = await supabase
+        .from("interest_messages")
+        .insert({
+          sender_id: user.id,
+          receiver_id: item.user_id,
+          item_id: item.id,
+          message: message,
+        });
+
+      if (msgError) {
+        console.error("Error sending message:", msgError);
+      }
+    }
+
+    // Vérifier s'il y a un match
     if (direction === "right") {
-      // Écouter les nouveaux matches
       const { data: newMatches } = await supabase
         .from("matches")
         .select("*, item1:item1_id(*), item2:item2_id(*)")
@@ -118,7 +150,7 @@ const Swipe = () => {
         const justCreated = new Date(match.created_at).getTime() > Date.now() - 2000;
         
         if (justCreated) {
-          setMatchedItem(currentItem);
+          setMatchedItem(item);
           setShowMatch(true);
         }
       }
@@ -126,6 +158,33 @@ const Swipe = () => {
 
     // Passer à l'item suivant
     setCurrentIndex(prev => prev + 1);
+  };
+
+  const handleSendMessage = async () => {
+    if (!pendingSwipeItem) return;
+    
+    await recordSwipe(pendingSwipeItem, "right", messageText.trim() || undefined);
+    
+    setShowMessageDialog(false);
+    setMessageText("");
+    setPendingSwipeItem(null);
+    
+    if (messageText.trim()) {
+      toast({
+        title: "Message envoyé !",
+        description: "Votre message a été envoyé avec votre like",
+      });
+    }
+  };
+
+  const handleSkipMessage = async () => {
+    if (!pendingSwipeItem) return;
+    
+    await recordSwipe(pendingSwipeItem, "right");
+    
+    setShowMessageDialog(false);
+    setMessageText("");
+    setPendingSwipeItem(null);
   };
 
   const handleDragEnd = (_: any, info: any) => {
@@ -229,6 +288,34 @@ const Swipe = () => {
         onClose={() => setShowMatch(false)}
         item={matchedItem}
       />
+
+      <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Envoyer un message ?</DialogTitle>
+            <DialogDescription>
+              Vous pouvez envoyer un message avec votre like pour montrer votre intérêt
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Textarea
+            placeholder="Écrivez un message (optionnel)..."
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            className="min-h-[100px]"
+            maxLength={500}
+          />
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleSkipMessage}>
+              Liker sans message
+            </Button>
+            <Button onClick={handleSendMessage}>
+              {messageText.trim() ? "Envoyer le message" : "Continuer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

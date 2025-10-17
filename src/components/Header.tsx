@@ -1,12 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Package, PlusCircle, Search, Heart } from "lucide-react";
+import { Package, PlusCircle, Search, Heart, MessageCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import SearchModal from "./SearchModal";
 import ProfileMenu from "./ProfileMenu";
+import { supabase } from "@/integrations/supabase/client";
 
 const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearchChange?: (query: string) => void } = {}) => {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadUnreadCount();
+    
+    // Subscribe to changes in interest_messages
+    const channel = supabase
+      .channel('interest_messages_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'interest_messages'
+        },
+        () => loadUnreadCount()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadUnreadCount = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("interest_messages")
+      .select("id", { count: "exact" })
+      .eq("receiver_id", user.id)
+      .eq("is_read", false);
+
+    if (!error && data) {
+      setUnreadCount(data.length);
+    }
+  };
 
   const handleSearchSubmit = (query: string) => {
     if (onSearchChange) {
@@ -45,6 +85,19 @@ const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearc
             >
               <Search className="h-5 w-5" />
             </Button>
+            <Link to="/interest-messages">
+              <Button variant="ghost" size="icon" className="relative hover:bg-primary/10">
+                <MessageCircle className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  >
+                    {unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
             <Link to="/swipe">
               <Button variant="default" size="sm" className="gap-2">
                 <Heart className="h-4 w-4" />
