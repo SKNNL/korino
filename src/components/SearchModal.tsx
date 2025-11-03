@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,9 @@ const SearchModal = ({ open, onOpenChange, onSearch }: SearchModalProps) => {
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="sr-only">Rechercher un objet</DialogTitle>
+          <DialogDescription className="sr-only">
+            Recherchez des objets à échanger par mot-clé ou parcourez les suggestions
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-6">

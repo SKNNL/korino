@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,9 @@ const MatchModal = ({ open, onClose, item }: MatchModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
+        <DialogDescription className="sr-only">
+          Notification de match avec un autre utilisateur
+        </DialogDescription>
         <div className="text-center py-6">
           <div className="mb-6">
             <Sparkles className="h-20 w-20 mx-auto text-primary animate-pulse" />
