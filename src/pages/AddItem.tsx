@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2 } from "lucide-react";
+import { itemSchema } from "@/lib/validations";
 
 const AddItem = () => {
   const navigate = useNavigate();
@@ -77,6 +78,18 @@ const AddItem = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Validate form data
+    const validation = itemSchema.safeParse(formData);
+    if (!validation.success) {
+      setLoading(false);
+      toast({
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const {

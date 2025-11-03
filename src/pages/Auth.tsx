@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Package } from "lucide-react";
+import { signUpSchema, signInSchema } from "@/lib/validations";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +23,18 @@ const Auth = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const fullName = formData.get("fullName") as string;
+
+    // Validate input
+    const validation = signUpSchema.safeParse({ email, password, fullName });
+    if (!validation.success) {
+      setIsLoading(false);
+      toast({
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -57,6 +70,18 @@ const Auth = () => {
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+
+    // Validate input
+    const validation = signInSchema.safeParse({ email, password });
+    if (!validation.success) {
+      setIsLoading(false);
+      toast({
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -164,7 +189,7 @@ const Auth = () => {
                       name="password"
                       type="password"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>

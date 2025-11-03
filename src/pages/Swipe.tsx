@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import MatchModal from "@/components/MatchModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { messageSchema } from "@/lib/validations";
 
 interface Item {
   id: string;
@@ -163,6 +164,19 @@ const Swipe = () => {
   const handleSendMessage = async () => {
     if (!pendingSwipeItem) return;
     
+    // Validate message if provided
+    if (messageText.trim()) {
+      const validation = messageSchema.safeParse({ content: messageText });
+      if (!validation.success) {
+        toast({
+          title: "Erreur de validation",
+          description: validation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     await recordSwipe(pendingSwipeItem, "right", messageText.trim() || undefined);
     
     setShowMessageDialog(false);
@@ -303,7 +317,7 @@ const Swipe = () => {
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             className="min-h-[100px]"
-            maxLength={500}
+            maxLength={1000}
           />
           
           <DialogFooter className="gap-2">

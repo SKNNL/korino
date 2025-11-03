@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { User, MapPin, FileText, ArrowLeft, Camera, Upload } from "lucide-react";
 import Header from "@/components/Header";
+import { profileSchema } from "@/lib/validations";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -109,6 +110,18 @@ const Profile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Validate form data
+    const validation = profileSchema.safeParse(profile);
+    if (!validation.success) {
+      setLoading(false);
+      toast({
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();

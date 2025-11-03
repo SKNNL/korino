@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send } from "lucide-react";
 import Header from "@/components/Header";
+import { messageSchema } from "@/lib/validations";
 
 interface MatchChatProps {
   matchId: string;
@@ -104,6 +105,17 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
 
+    // Validate message
+    const validation = messageSchema.safeParse({ content: newMessage });
+    if (!validation.success) {
+      toast({
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await supabase.from("messages").insert({
       match_id: matchId,
       sender_id: user.id,
@@ -179,6 +191,7 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Tapez votre message..."
               className="flex-1"
+              maxLength={1000}
             />
             <Button type="submit" size="icon" disabled={!newMessage.trim()}>
               <Send className="h-4 w-4" />
