@@ -23,7 +23,7 @@ const Hero = ({ onSearch }: { onSearch?: (query: string) => void }) => {
     <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5">
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold text-foreground leading-tight">
               Échangez vos objets,
               <span className="text-primary block">partagez l'essentiel</span>
@@ -49,8 +49,8 @@ const Hero = ({ onSearch }: { onSearch?: (query: string) => void }) => {
             </div>
           </div>
           
-          <div className="relative">
-            <div className="rounded-2xl overflow-hidden shadow-2xl">
+          <div className="relative animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="rounded-2xl overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-105">
               <img 
                 src={heroImage} 
                 alt="Échange d'objets entre personnes" 

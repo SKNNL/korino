@@ -37,12 +37,12 @@ const ItemCard = ({ title, description, category, location, date, image, image_u
   const displayDate = date || (created_at ? formatDate(created_at) : "Récemment");
   
   return (
-    <Card className="group overflow-hidden border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+    <Card className="group overflow-hidden border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-fade-in">
       <div className="aspect-square overflow-hidden bg-muted">
         <img 
           src={displayImage} 
           alt={title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
         />
       </div>
       
@@ -71,7 +71,7 @@ const ItemCard = ({ title, description, category, location, date, image, image_u
       </CardContent>
       
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full" variant="outline">
+        <Button className="w-full hover-scale" variant="outline">
           Proposer un échange
         </Button>
       </CardFooter>

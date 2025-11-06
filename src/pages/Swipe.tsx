@@ -231,8 +231,13 @@ const Swipe = () => {
           </div>
 
           {!currentItem ? (
-            <div className="text-center py-20">
-              <Sparkles className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <motion.div 
+              className="text-center py-20"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <Sparkles className="h-16 w-16 mx-auto mb-4 text-muted-foreground animate-pulse" />
               <h2 className="text-2xl font-bold mb-2">Plus d'objets disponibles</h2>
               <p className="text-muted-foreground mb-6">
                 Revenez plus tard pour découvrir de nouveaux objets
@@ -240,7 +245,7 @@ const Swipe = () => {
               <Button onClick={() => navigate("/")}>
                 Retour à l'accueil
               </Button>
-            </div>
+            </motion.div>
           ) : (
             <div className="relative h-[600px]">
               <motion.div
@@ -249,6 +254,10 @@ const Swipe = () => {
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
                 onDragEnd={handleDragEnd}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                key={currentIndex}
               >
                 <div className="h-full rounded-2xl overflow-hidden shadow-2xl bg-card">
                   <div className="h-2/3 bg-muted relative">
@@ -276,21 +285,33 @@ const Swipe = () => {
 
               {/* Boutons de swipe */}
               <div className="absolute -bottom-20 left-0 right-0 flex justify-center gap-8">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="h-16 w-16 rounded-full shadow-lg hover:scale-110 transition-transform"
-                  onClick={() => handleSwipe("left")}
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <X className="h-8 w-8 text-destructive" />
-                </Button>
-                <Button
-                  size="icon"
-                  className="h-16 w-16 rounded-full shadow-lg hover:scale-110 transition-transform"
-                  onClick={() => handleSwipe("right")}
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-16 w-16 rounded-full shadow-lg transition-all duration-200"
+                    onClick={() => handleSwipe("left")}
+                  >
+                    <X className="h-8 w-8 text-destructive" />
+                  </Button>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <Heart className="h-8 w-8" />
-                </Button>
+                  <Button
+                    size="icon"
+                    className="h-16 w-16 rounded-full shadow-lg transition-all duration-200"
+                    onClick={() => handleSwipe("right")}
+                  >
+                    <Heart className="h-8 w-8" />
+                  </Button>
+                </motion.div>
               </div>
             </div>
           )}
