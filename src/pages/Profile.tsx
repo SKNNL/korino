@@ -95,14 +95,29 @@ const Profile = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "Fichier trop volumineux",
           description: "La taille maximale est de 5 MB.",
           variant: "destructive",
         });
+        e.target.value = ""; // Reset input
         return;
       }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Format non supporté",
+          description: "Seuls les formats JPEG, PNG et WebP sont acceptés.",
+          variant: "destructive",
+        });
+        e.target.value = ""; // Reset input
+        return;
+      }
+
       uploadAvatar(file);
     }
   };
