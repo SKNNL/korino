@@ -5,6 +5,7 @@ import { Package, PlusCircle, Search, Heart, MessageCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge";
 import SearchModal from "./SearchModal";
 import ProfileMenu from "./ProfileMenu";
+import NotificationBell from "./NotificationBell";
 import { supabase } from "@/integrations/supabase/client";
 
 const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearchChange?: (query: string) => void } = {}) => {
@@ -85,6 +86,7 @@ const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearc
             >
               <Search className="h-5 w-5" />
             </Button>
+            <NotificationBell />
             <Link to="/interest-messages">
               <Button variant="ghost" size="icon" className="relative hover:bg-primary/10">
                 <MessageCircle className="h-5 w-5" />
