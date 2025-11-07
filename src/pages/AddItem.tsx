@@ -16,6 +16,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2 } from "lucide-react";
 import { itemSchema } from "@/lib/validations";
+import LocationInput from "@/components/LocationInput";
+import SEO from "@/components/SEO";
 
 const AddItem = () => {
   const navigate = useNavigate();
@@ -31,6 +33,8 @@ const AddItem = () => {
     brand: "",
     condition: "",
     price_range: "",
+    latitude: 0,
+    longitude: 0,
   });
 
   const categories = [
@@ -155,6 +159,8 @@ const AddItem = () => {
         description: formData.description,
         category: formData.category,
         location: formData.location,
+        latitude: formData.latitude || null,
+        longitude: formData.longitude || null,
         image_url: imageUrl,
         brand: formData.brand || null,
         condition: formData.condition || null,
@@ -183,6 +189,10 @@ const AddItem = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Proposer un objet à échanger"
+        description="Ajoutez un objet que vous souhaitez échanger. Prenez une photo, décrivez l'objet et trouvez quelqu'un pour l'échanger."
+      />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <h1 className="text-3xl font-bold mb-8">Proposer un objet</h1>
@@ -343,17 +353,17 @@ const AddItem = () => {
           </div>
 
           {/* Location */}
-          <div>
-            <Label htmlFor="location">Localisation</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) =>
-                setFormData({ ...formData, location: e.target.value })
-              }
-              placeholder="Ex: Paris 75001"
-            />
-          </div>
+          <LocationInput
+            onLocationChange={(location) =>
+              setFormData({
+                ...formData,
+                location: location.address,
+                latitude: location.latitude,
+                longitude: location.longitude,
+              })
+            }
+            initialAddress={formData.location}
+          />
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (

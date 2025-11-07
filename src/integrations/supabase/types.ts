@@ -91,7 +91,9 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          latitude: number | null
           location: string | null
+          longitude: number | null
           price_range: string | null
           title: string
           user_id: string
@@ -105,7 +107,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           price_range?: string | null
           title: string
           user_id: string
@@ -119,7 +123,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           price_range?: string | null
           title?: string
           user_id?: string
@@ -246,7 +252,9 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          latitude: number | null
           location: string | null
+          longitude: number | null
           updated_at: string | null
         }
         Insert: {
@@ -256,7 +264,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -266,8 +276,40 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          match_id: string
+          rating: number
+          reviewed_user_id: string
+          reviewer_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          match_id: string
+          rating: number
+          reviewed_user_id: string
+          reviewer_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          match_id?: string
+          rating?: number
+          reviewed_user_id?: string
+          reviewer_id?: string
         }
         Relationships: []
       }
@@ -315,7 +357,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_average_rating: { Args: { user_id: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never

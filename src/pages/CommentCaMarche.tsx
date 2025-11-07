@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import SEO from "@/components/SEO";
 import { ArrowRight, Package, Users, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,8 +24,37 @@ const steps = [
 ];
 
 const CommentCaMarche = () => {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "Comment échanger des objets sur Koino",
+    "description": "Guide étape par étape pour échanger vos objets sur Koino",
+    "step": [
+      {
+        "@type": "HowToStep",
+        "name": "Proposez vos objets",
+        "text": "Prenez une photo de l'objet que vous souhaitez échanger, ajoutez une description et publiez votre annonce",
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Trouvez un échange",
+        "text": "Parcourez les annonces et trouvez l'objet qui vous intéresse. Contactez le propriétaire pour proposer un échange",
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Échangez en toute simplicité",
+        "text": "Convenez d'un lieu de rencontre et procédez à l'échange",
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Comment ça marche - Guide complet"
+        description="Découvrez comment échanger vos objets facilement en 3 étapes simples. Troc gratuit, solidaire et écologique."
+        schema={schema}
+      />
       <Header />
       
       <main className="container mx-auto px-4 py-12">

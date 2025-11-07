@@ -1,14 +1,25 @@
+import { useState } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ItemGrid from "@/components/ItemGrid";
-
-import { useState } from "react";
+import SEO from "@/components/SEO";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Koino",
+    "description": "Plateforme d'échange d'objets entre particuliers. Troc solidaire et écologique.",
+    "url": "https://koino.app",
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        schema={schema}
+      />
       <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <main>
         <Hero onSearch={setSearchQuery} />
