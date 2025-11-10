@@ -41,9 +41,23 @@ const LocationInput = ({ onLocationChange, initialAddress = "" }: LocationInputP
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
           );
+          
+          if (!response.ok) {
+            throw new Error("Erreur lors de la récupération de l'adresse");
+          }
+          
           const data = await response.json();
           
-          const addr = data.display_name || `${latitude}, ${longitude}`;
+          // Validate response structure
+          if (!data || typeof data !== 'object') {
+            throw new Error("Réponse invalide de l'API de géolocalisation");
+          }
+          
+          // Sanitize display_name
+          const addr = typeof data.display_name === 'string' 
+            ? data.display_name.trim().substring(0, 200) 
+            : `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          
           setAddress(addr);
           onLocationChange({ address: addr, latitude, longitude });
           
@@ -53,7 +67,7 @@ const LocationInput = ({ onLocationChange, initialAddress = "" }: LocationInputP
           });
         } catch (error) {
           console.error("Geocoding error:", error);
-          const addr = `${latitude}, ${longitude}`;
+          const addr = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
           setAddress(addr);
           onLocationChange({ address: addr, latitude, longitude });
         } finally {

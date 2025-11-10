@@ -43,6 +43,17 @@ const ReviewModal = ({
       return;
     }
 
+    // Client-side validation
+    const trimmedComment = comment.trim();
+    if (trimmedComment.length > 1000) {
+      toast({
+        title: "Erreur",
+        description: "Le commentaire ne peut pas dépasser 1000 caractères",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -54,12 +65,13 @@ const ReviewModal = ({
         throw new Error("Non authentifié");
       }
 
+      // Server-side validation is handled by the database trigger
       const { error } = await supabase.from("reviews").insert({
         match_id: matchId,
         reviewer_id: user.id,
         reviewed_user_id: reviewedUserId,
         rating,
-        comment: comment.trim() || null,
+        comment: trimmedComment || null,
       });
 
       if (error) throw error;
@@ -72,11 +84,11 @@ const ReviewModal = ({
       onOpenChange(false);
       setRating(0);
       setComment("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting review:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de publier l'avis",
+        description: error.message || "Impossible de publier l'avis",
         variant: "destructive",
       });
     } finally {
@@ -130,10 +142,10 @@ const ReviewModal = ({
               onChange={(e) => setComment(e.target.value)}
               placeholder="Partagez votre expérience..."
               rows={4}
-              maxLength={500}
+              maxLength={1000}
             />
             <p className="text-xs text-muted-foreground text-right">
-              {comment.length}/500
+              {comment.length}/1000
             </p>
           </div>
 

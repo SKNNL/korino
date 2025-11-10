@@ -29,6 +29,7 @@ const Settings = () => {
     matches: true,
     messages: true,
   });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -39,6 +40,21 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setEmail(user.email || "");
+        
+        // Load notification preferences
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email_notifications, match_notifications, message_notifications")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        if (profile) {
+          setNotifications({
+            email: profile.email_notifications ?? true,
+            matches: profile.match_notifications ?? true,
+            messages: profile.message_notifications ?? true,
+          });
+        }
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -50,7 +66,13 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      await supabase.from("profiles").delete().eq("id", user.id);
+      // Use the comprehensive deletion function
+      const { error } = await supabase.rpc("delete_user_account", {
+        user_id_to_delete: user.id,
+      });
+
+      if (error) throw error;
+
       await supabase.auth.signOut();
       
       toast({
@@ -59,11 +81,44 @@ const Settings = () => {
       });
       navigate("/");
     } catch (error) {
+      console.error("Error deleting account:", error);
       toast({
         title: "Erreur",
         description: "Impossible de supprimer le compte.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleNotificationChange = async (
+    field: "email_notifications" | "match_notifications" | "message_notifications",
+    value: boolean
+  ) => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ [field]: value })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Préférences mises à jour",
+        description: "Vos préférences de notification ont été enregistrées",
+      });
+    } catch (error) {
+      console.error("Error updating preferences:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les préférences",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,9 +163,11 @@ const Settings = () => {
                 </div>
                 <Switch
                   checked={notifications.email}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, email: checked })
-                  }
+                  onCheckedChange={(checked) => {
+                    setNotifications({ ...notifications, email: checked });
+                    handleNotificationChange("email_notifications", checked);
+                  }}
+                  disabled={loading}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -122,9 +179,11 @@ const Settings = () => {
                 </div>
                 <Switch
                   checked={notifications.matches}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, matches: checked })
-                  }
+                  onCheckedChange={(checked) => {
+                    setNotifications({ ...notifications, matches: checked });
+                    handleNotificationChange("match_notifications", checked);
+                  }}
+                  disabled={loading}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -136,9 +195,11 @@ const Settings = () => {
                 </div>
                 <Switch
                   checked={notifications.messages}
-                  onCheckedChange={(checked) =>
-                    setNotifications({ ...notifications, messages: checked })
-                  }
+                  onCheckedChange={(checked) => {
+                    setNotifications({ ...notifications, messages: checked });
+                    handleNotificationChange("message_notifications", checked);
+                  }}
+                  disabled={loading}
                 />
               </div>
             </div>

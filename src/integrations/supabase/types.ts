@@ -283,11 +283,14 @@ export type Database = {
           bio: string | null
           created_at: string | null
           email: string | null
+          email_notifications: boolean | null
           full_name: string | null
           id: string
           latitude: number | null
           location: string | null
           longitude: number | null
+          match_notifications: boolean | null
+          message_notifications: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -295,11 +298,14 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           email?: string | null
+          email_notifications?: boolean | null
           full_name?: string | null
           id: string
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          match_notifications?: boolean | null
+          message_notifications?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -307,11 +313,14 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           email?: string | null
+          email_notifications?: boolean | null
           full_name?: string | null
           id?: string
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          match_notifications?: boolean | null
+          message_notifications?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
@@ -399,6 +408,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      delete_user_account: {
+        Args: { user_id_to_delete: string }
+        Returns: undefined
       }
       get_user_average_rating: { Args: { user_id: string }; Returns: number }
     }
