@@ -1,5 +1,6 @@
-import { User, Heart, Package, Settings, LogOut } from "lucide-react";
+import { User, Heart, Package, Settings, LogOut, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +16,17 @@ import { useToast } from "@/hooks/use-toast";
 const ProfileMenu = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    getUser();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -46,6 +58,10 @@ const ProfileMenu = () => {
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
           <User className="mr-2 h-4 w-4" />
           <span>Mon profil</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer" onClick={() => userId && navigate(`/dashboard/${userId}`)}>
+          <BarChart3 className="mr-2 h-4 w-4" />
+          <span>Mon tableau de bord</span>
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/my-items")}>
           <Package className="mr-2 h-4 w-4" />

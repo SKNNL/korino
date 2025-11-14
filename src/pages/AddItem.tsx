@@ -33,6 +33,7 @@ const AddItem = () => {
     brand: "",
     condition: "",
     price_range: "",
+    estimated_value: "",
     latitude: 0,
     longitude: 0,
   });
@@ -165,6 +166,7 @@ const AddItem = () => {
         brand: formData.brand || null,
         condition: formData.condition || null,
         price_range: formData.price_range || null,
+        estimated_value: formData.estimated_value ? parseFloat(formData.estimated_value) : null,
       });
 
       if (insertError) throw insertError;
@@ -350,6 +352,25 @@ const AddItem = () => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Estimated Value */}
+          <div>
+            <Label htmlFor="estimated_value">Valeur estimée (€)</Label>
+            <Input
+              id="estimated_value"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.estimated_value}
+              onChange={(e) =>
+                setFormData({ ...formData, estimated_value: e.target.value })
+              }
+              placeholder="Ex: 50.00"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Optionnel - Aide à calculer votre impact écologique
+            </p>
           </div>
 
           {/* Location */}

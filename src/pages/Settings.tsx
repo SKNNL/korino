@@ -4,10 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Bell, Mail, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
+import MessageTemplates from "@/components/MessageTemplates";
+import VerificationRequest from "@/components/VerificationRequest";
+import SEO from "@/components/SEO";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +45,6 @@ const Settings = () => {
       if (user) {
         setEmail(user.email || "");
         
-        // Load notification preferences
         const { data: profile } = await supabase
           .from("profiles")
           .select("email_notifications, match_notifications, message_notifications")
@@ -66,13 +69,11 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Use the comprehensive deletion function
       const { error } = await supabase.rpc("delete_user_account", {
         user_id_to_delete: user.id,
       });
 
       if (error) throw error;
-
       await supabase.auth.signOut();
       
       toast({
@@ -124,146 +125,140 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO title="Paramètres" description="Gérez vos préférences" />
       <Header />
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" onClick={() => navigate("/")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Retour
           </Button>
-          <h1 className="text-3xl font-bold text-foreground">Paramètres</h1>
+          <h1 className="text-3xl font-bold">Paramètres</h1>
         </div>
 
-        <div className="bg-card rounded-lg shadow-sm p-6 space-y-6">
-          <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Compte
-            </h2>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <p className="text-sm text-muted-foreground">{email}</p>
-            </div>
-          </div>
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="profile">Profil</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="templates">Modèles</TabsTrigger>
+            <TabsTrigger value="account">Compte</TabsTrigger>
+          </TabsList>
 
-          <Separator />
-
-          <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Notifications par email</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Recevoir des emails de notification
-                  </p>
+          <TabsContent value="profile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Informations</CardTitle>
+                <CardDescription>Vos informations personnelles</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <p className="text-sm text-muted-foreground">{email}</p>
                 </div>
-                <Switch
-                  checked={notifications.email}
-                  onCheckedChange={(checked) => {
-                    setNotifications({ ...notifications, email: checked });
-                    handleNotificationChange("email_notifications", checked);
-                  }}
-                  disabled={loading}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Nouveaux matchs</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Être notifié des nouveaux matchs
-                  </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>Gérez vos préférences</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-sm font-medium">Notifications par email</label>
+                    <p className="text-xs text-muted-foreground">Recevoir des emails</p>
+                  </div>
+                  <Switch
+                    checked={notifications.email}
+                    onCheckedChange={(checked) => {
+                      setNotifications({ ...notifications, email: checked });
+                      handleNotificationChange("email_notifications", checked);
+                    }}
+                    disabled={loading}
+                  />
                 </div>
-                <Switch
-                  checked={notifications.matches}
-                  onCheckedChange={(checked) => {
-                    setNotifications({ ...notifications, matches: checked });
-                    handleNotificationChange("match_notifications", checked);
-                  }}
-                  disabled={loading}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Nouveaux messages</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Être notifié des nouveaux messages
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-sm font-medium">Nouveaux matches</label>
+                    <p className="text-xs text-muted-foreground">Notification de match</p>
+                  </div>
+                  <Switch
+                    checked={notifications.matches}
+                    onCheckedChange={(checked) => {
+                      setNotifications({ ...notifications, matches: checked });
+                      handleNotificationChange("match_notifications", checked);
+                    }}
+                    disabled={loading}
+                  />
                 </div>
-                <Switch
-                  checked={notifications.messages}
-                  onCheckedChange={(checked) => {
-                    setNotifications({ ...notifications, messages: checked });
-                    handleNotificationChange("message_notifications", checked);
-                  }}
-                  disabled={loading}
-                />
-              </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-sm font-medium">Messages</label>
+                    <p className="text-xs text-muted-foreground">Nouveaux messages</p>
+                  </div>
+                  <Switch
+                    checked={notifications.messages}
+                    onCheckedChange={(checked) => {
+                      setNotifications({ ...notifications, messages: checked });
+                      handleNotificationChange("message_notifications", checked);
+                    }}
+                    disabled={loading}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <Card>
+              <CardContent className="pt-6">
+                <MessageTemplates />
+              </CardContent>
+            </Card>
+            <div className="mt-6">
+              <VerificationRequest />
             </div>
-          </div>
+          </TabsContent>
 
-          <Separator />
-
-          <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Confidentialité
-            </h2>
-            <div className="space-y-4">
-              <Button
-                variant="outline"
-                onClick={() => navigate("/comment-ca-marche")}
-                className="w-full justify-start"
-              >
-                Politique de confidentialité
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate("/comment-ca-marche")}
-                className="w-full justify-start"
-              >
-                Conditions d'utilisation
-              </Button>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
-              Zone de danger
-            </h2>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
-                  Supprimer mon compte
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Êtes-vous vraiment sûr ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Cette action est irréversible. Toutes vos données, objets et
-                    matchs seront définitivement supprimés.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDeleteAccount}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Supprimer définitivement
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
+          <TabsContent value="account">
+            <Card>
+              <CardHeader>
+                <CardTitle>Supprimer le compte</CardTitle>
+                <CardDescription>Action irréversible</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Supprimer mon compte
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Cette action supprimera toutes vos données définitivement.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAccount}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Supprimer
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
