@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      exchange_proposals: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          receiver_id: string
+          receiver_item_id: string
+          sender_id: string
+          sender_items: string[]
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          receiver_id: string
+          receiver_item_id: string
+          sender_id: string
+          sender_items: string[]
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          receiver_id?: string
+          receiver_item_id?: string
+          sender_id?: string
+          sender_items?: string[]
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exchange_proposals_receiver_item_id_fkey"
+            columns: ["receiver_item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string | null
@@ -88,6 +132,7 @@ export type Database = {
           condition: string | null
           created_at: string | null
           description: string | null
+          estimated_value: number | null
           id: string
           image_url: string | null
           is_active: boolean | null
@@ -104,6 +149,7 @@ export type Database = {
           condition?: string | null
           created_at?: string | null
           description?: string | null
+          estimated_value?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
@@ -120,6 +166,7 @@ export type Database = {
           condition?: string | null
           created_at?: string | null
           description?: string | null
+          estimated_value?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
@@ -205,6 +252,30 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -286,12 +357,14 @@ export type Database = {
           email_notifications: boolean | null
           full_name: string | null
           id: string
+          is_verified: boolean | null
           latitude: number | null
           location: string | null
           longitude: number | null
           match_notifications: boolean | null
           message_notifications: boolean | null
           updated_at: string | null
+          verified_at: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -301,12 +374,14 @@ export type Database = {
           email_notifications?: boolean | null
           full_name?: string | null
           id: string
+          is_verified?: boolean | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
           match_notifications?: boolean | null
           message_notifications?: boolean | null
           updated_at?: string | null
+          verified_at?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -316,14 +391,57 @@ export type Database = {
           email_notifications?: boolean | null
           full_name?: string | null
           id?: string
+          is_verified?: boolean | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
           match_notifications?: boolean | null
           message_notifications?: boolean | null
           updated_at?: string | null
+          verified_at?: string | null
         }
         Relationships: []
+      }
+      reports: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          reason: string
+          reported_item_id: string | null
+          reported_user_id: string | null
+          reporter_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          reason: string
+          reported_item_id?: string | null
+          reported_user_id?: string | null
+          reporter_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          reason?: string
+          reported_item_id?: string | null
+          reported_user_id?: string | null
+          reporter_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reported_item_id_fkey"
+            columns: ["reported_item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -414,6 +532,19 @@ export type Database = {
         Returns: undefined
       }
       get_user_average_rating: { Args: { user_id: string }; Returns: number }
+      get_user_co2_saved: { Args: { user_id_param: string }; Returns: number }
+      get_user_stats: {
+        Args: { user_id_param: string }
+        Returns: {
+          active_items: number
+          average_rating: number
+          co2_saved: number
+          completed_exchanges: number
+          total_items: number
+          total_matches: number
+          total_value: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

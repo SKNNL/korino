@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar } from "lucide-react";
+import { MapPin, Calendar, Flag } from "lucide-react";
+import ExchangeProposalModal from "@/components/ExchangeProposalModal";
+import ReportModal from "@/components/ReportModal";
 
 // Helper function to format date
 const formatDate = (dateString: string) => {
@@ -27,9 +30,14 @@ interface ItemCardProps {
   image?: string;
   image_url?: string;
   created_at?: string;
+  itemId?: string;
+  ownerId?: string;
 }
 
-const ItemCard = ({ title, description, category, location, date, image, image_url, created_at }: ItemCardProps) => {
+const ItemCard = ({ title, description, category, location, date, image, image_url, created_at, itemId, ownerId }: ItemCardProps) => {
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  
   // Use image_url from database or fallback to image prop or placeholder
   const displayImage = image_url || image || "/placeholder.svg";
   
@@ -37,6 +45,7 @@ const ItemCard = ({ title, description, category, location, date, image, image_u
   const displayDate = date || (created_at ? formatDate(created_at) : "Récemment");
   
   return (
+    <>
     <Card className="group overflow-hidden border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-fade-in">
       <div className="aspect-square overflow-hidden bg-muted">
         <img 
@@ -70,12 +79,45 @@ const ItemCard = ({ title, description, category, location, date, image, image_u
         </div>
       </CardContent>
       
-      <CardFooter className="p-4 pt-0">
-        <Button className="w-full hover-scale" variant="outline">
+      <CardFooter className="p-4 pt-0 flex gap-2">
+        <Button 
+          className="flex-1 hover-scale" 
+          variant="outline"
+          onClick={() => itemId && ownerId && setShowExchangeModal(true)}
+          disabled={!itemId || !ownerId}
+        >
           Proposer un échange
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setShowReportModal(true)}
+          className="shrink-0"
+        >
+          <Flag className="h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>
+    
+    {itemId && ownerId && (
+      <>
+        <ExchangeProposalModal
+          open={showExchangeModal}
+          onOpenChange={setShowExchangeModal}
+          receiverItemId={itemId}
+          receiverItemTitle={title}
+          receiverId={ownerId}
+        />
+        <ReportModal
+          open={showReportModal}
+          onOpenChange={setShowReportModal}
+          targetType="item"
+          targetId={itemId}
+          targetName={title}
+        />
+      </>
+    )}
+    </>
   );
 };
 
