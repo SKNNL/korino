@@ -15,6 +15,7 @@ interface Item {
   location: string;
   image_url: string;
   created_at: string;
+  user_id: string;
 }
 
 const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
@@ -104,7 +105,12 @@ const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[400px]">
               {items.map((item) => (
-                <ItemCard key={item.id} {...item} />
+                <ItemCard 
+                  key={item.id} 
+                  {...item} 
+                  itemId={item.id}
+                  ownerId={item.user_id}
+                />
               ))}
             </div>
             
