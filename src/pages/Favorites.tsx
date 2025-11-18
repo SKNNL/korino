@@ -89,7 +89,12 @@ const Favorites = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[400px]">
               {favorites.map((item) => (
-                <ItemCard key={item.id} {...item} />
+                <ItemCard 
+                  key={item.id} 
+                  {...item} 
+                  itemId={item.id}
+                  ownerId={item.user_id}
+                />
               ))}
             </div>
 
