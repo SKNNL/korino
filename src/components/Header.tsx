@@ -86,6 +86,11 @@ const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearc
             >
               <Search className="h-5 w-5" />
             </Button>
+            <Link to="/favorites">
+              <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                <Heart className="h-5 w-5" />
+              </Button>
+            </Link>
             <NotificationBell />
             <Link to="/interest-messages">
               <Button variant="ghost" size="icon" className="relative hover:bg-primary/10">
