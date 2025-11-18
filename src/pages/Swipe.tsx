@@ -4,9 +4,11 @@ import { motion, useMotionValue, useTransform } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { X, Heart, ArrowLeft, Sparkles } from "lucide-react";
+import { X, Heart, ArrowLeft, Sparkles, Flag, Repeat } from "lucide-react";
 import Header from "@/components/Header";
 import MatchModal from "@/components/MatchModal";
+import ExchangeProposalModal from "@/components/ExchangeProposalModal";
+import ReportModal from "@/components/ReportModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { messageSchema } from "@/lib/validations";
@@ -30,6 +32,8 @@ const Swipe = () => {
   const [showMessageDialog, setShowMessageDialog] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [pendingSwipeItem, setPendingSwipeItem] = useState<Item | null>(null);
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const x = useMotionValue(0);
@@ -284,7 +288,17 @@ const Swipe = () => {
               </motion.div>
 
               {/* Boutons de swipe */}
-              <div className="absolute -bottom-20 left-0 right-0 flex justify-center gap-8">
+              <div className="absolute -bottom-20 left-0 right-0 flex justify-center gap-4">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-12 w-12"
+                  onClick={() => setShowReportModal(true)}
+                  title="Signaler"
+                >
+                  <Flag className="h-5 w-5" />
+                </Button>
+                
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
@@ -299,6 +313,7 @@ const Swipe = () => {
                     <X className="h-8 w-8 text-destructive" />
                   </Button>
                 </motion.div>
+                
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
@@ -306,12 +321,23 @@ const Swipe = () => {
                 >
                   <Button
                     size="icon"
-                    className="h-16 w-16 rounded-full shadow-lg transition-all duration-200"
+                    variant="outline"
+                    className="h-16 w-16 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200"
                     onClick={() => handleSwipe("right")}
                   >
                     <Heart className="h-8 w-8" />
                   </Button>
                 </motion.div>
+                
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-12 w-12"
+                  onClick={() => setShowExchangeModal(true)}
+                  title="Proposer un échange"
+                >
+                  <Repeat className="h-5 w-5" />
+                </Button>
               </div>
             </div>
           )}
@@ -351,6 +377,25 @@ const Swipe = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {currentItem && (
+        <>
+          <ExchangeProposalModal
+            open={showExchangeModal}
+            onOpenChange={setShowExchangeModal}
+            receiverItemId={currentItem.id}
+            receiverItemTitle={currentItem.title}
+            receiverId={currentItem.user_id}
+          />
+          <ReportModal
+            open={showReportModal}
+            onOpenChange={setShowReportModal}
+            targetType="item"
+            targetId={currentItem.id}
+            targetName={currentItem.title}
+          />
+        </>
+      )}
     </div>
   );
 };
