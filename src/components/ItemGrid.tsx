@@ -59,10 +59,17 @@ const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
           query = query.eq("category", selectedCategory);
         }
 
-        // Apply search filter
+        // Apply search filter with sanitization
         if (searchQuery && searchQuery.trim()) {
-          const search = searchQuery.toLowerCase();
-          query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+          const sanitized = searchQuery
+            .trim()
+            .replace(/[^\\w\\s\\u00C0-\\u017F-]/g, '')
+            .slice(0, 100)
+            .toLowerCase();
+          
+          if (sanitized) {
+            query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+          }
         }
 
         const { data: allItems, error } = await query.order("created_at", { ascending: false });
@@ -105,10 +112,17 @@ const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
           query = query.eq("category", selectedCategory);
         }
 
-        // Apply search filter
+        // Apply search filter with sanitization
         if (searchQuery && searchQuery.trim()) {
-          const search = searchQuery.toLowerCase();
-          query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+          const sanitized = searchQuery
+            .trim()
+            .replace(/[^\\w\\s\\u00C0-\\u017F-]/g, '')
+            .slice(0, 100)
+            .toLowerCase();
+          
+          if (sanitized) {
+            query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+          }
         }
 
         // Apply pagination

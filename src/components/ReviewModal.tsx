@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { reviewSchema } from "@/lib/validations";
 
 interface ReviewModalProps {
   open: boolean;
@@ -34,21 +35,16 @@ const ReviewModal = ({
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (rating === 0) {
-      toast({
-        title: "Note requise",
-        description: "Veuillez sélectionner une note",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Validate with schema
+    const validation = reviewSchema.safeParse({
+      rating,
+      comment: comment.trim() || undefined,
+    });
 
-    // Client-side validation
-    const trimmedComment = comment.trim();
-    if (trimmedComment.length > 1000) {
+    if (!validation.success) {
       toast({
-        title: "Erreur",
-        description: "Le commentaire ne peut pas dépasser 1000 caractères",
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
@@ -65,13 +61,12 @@ const ReviewModal = ({
         throw new Error("Non authentifié");
       }
 
-      // Server-side validation is handled by the database trigger
       const { error } = await supabase.from("reviews").insert({
         match_id: matchId,
         reviewer_id: user.id,
         reviewed_user_id: reviewedUserId,
-        rating,
-        comment: trimmedComment || null,
+        rating: validation.data.rating,
+        comment: validation.data.comment || null,
       });
 
       if (error) throw error;
@@ -142,10 +137,10 @@ const ReviewModal = ({
               onChange={(e) => setComment(e.target.value)}
               placeholder="Partagez votre expérience..."
               rows={4}
-              maxLength={1000}
+              maxLength={500}
             />
             <p className="text-xs text-muted-foreground text-right">
-              {comment.length}/1000
+              {comment.length}/500
             </p>
           </div>
 

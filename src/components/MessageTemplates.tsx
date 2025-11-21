@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, MessageSquare } from "lucide-react";
+import { messageTemplateSchema } from "@/lib/validations";
 
 interface MessageTemplate {
   id: string;
@@ -59,10 +60,16 @@ const MessageTemplates = ({ onSelectTemplate }: MessageTemplatesProps) => {
   };
 
   const handleCreate = async () => {
-    if (!newTitle.trim() || !newContent.trim()) {
+    // Validate with schema
+    const validation = messageTemplateSchema.safeParse({
+      title: newTitle.trim(),
+      content: newContent.trim(),
+    });
+
+    if (!validation.success) {
       toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs",
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
@@ -75,8 +82,8 @@ const MessageTemplates = ({ onSelectTemplate }: MessageTemplatesProps) => {
 
     const { error } = await supabase.from("message_templates").insert({
       user_id: user.id,
-      title: newTitle.trim(),
-      content: newContent.trim(),
+      title: validation.data.title,
+      content: validation.data.content,
     });
 
     if (error) {
