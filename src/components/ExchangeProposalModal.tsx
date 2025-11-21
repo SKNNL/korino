@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { exchangeProposalSchema } from "@/lib/validations";
 
 interface Item {
   id: string;
@@ -73,6 +74,20 @@ const ExchangeProposalModal = ({
       return;
     }
 
+    // Validate message with schema
+    const validation = exchangeProposalSchema.safeParse({
+      message: message.trim() || undefined,
+    });
+
+    if (!validation.success) {
+      toast({
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -86,7 +101,7 @@ const ExchangeProposalModal = ({
         receiver_id: receiverId,
         sender_items: selectedItems,
         receiver_item_id: receiverItemId,
-        message: message.trim() || null,
+        message: validation.data.message || null,
       });
 
       if (error) throw error;

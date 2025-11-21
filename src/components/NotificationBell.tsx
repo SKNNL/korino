@@ -30,7 +30,7 @@ const NotificationBell = () => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
+    const setupNotifications = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -48,31 +48,32 @@ const NotificationBell = () => {
         setNotifications(data);
         setUnreadCount(data.filter((n) => !n.is_read).length);
       }
+
+      // Subscribe to new notifications with user filter
+      const channel = supabase
+        .channel(`notifications-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotif = payload.new as Notification;
+            setNotifications((prev) => [newNotif, ...prev.slice(0, 9)]);
+            setUnreadCount((prev) => prev + 1);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     };
 
-    fetchNotifications();
-
-    // Subscribe to new notifications
-    const channel = supabase
-      .channel("notifications-channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-        },
-        (payload) => {
-          const newNotif = payload.new as Notification;
-          setNotifications((prev) => [newNotif, ...prev.slice(0, 9)]);
-          setUnreadCount((prev) => prev + 1);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    setupNotifications();
   }, []);
 
   const markAsRead = async (notificationId: string) => {

@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle } from "lucide-react";
+import { reportSchema } from "@/lib/validations";
 
 interface ReportModalProps {
   open: boolean;
@@ -42,10 +43,16 @@ const ReportModal = ({
   ];
 
   const handleSubmit = async () => {
-    if (!description.trim()) {
+    // Validate with schema
+    const validation = reportSchema.safeParse({
+      reason,
+      description: description.trim(),
+    });
+
+    if (!validation.success) {
       toast({
-        title: "Erreur",
-        description: "Veuillez décrire le problème",
+        title: "Erreur de validation",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
@@ -61,8 +68,8 @@ const ReportModal = ({
 
       const reportData: any = {
         reporter_id: user.id,
-        reason,
-        description: description.trim(),
+        reason: validation.data.reason,
+        description: validation.data.description,
       };
 
       if (targetType === "user") {
@@ -131,10 +138,10 @@ const ReportModal = ({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Décrivez le problème en détail..."
               rows={4}
-              maxLength={1000}
+              maxLength={2000}
             />
             <p className="text-xs text-muted-foreground text-right">
-              {description.length}/1000
+              {description.length}/2000
             </p>
           </div>
 
