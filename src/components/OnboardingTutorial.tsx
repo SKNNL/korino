@@ -101,15 +101,6 @@ const OnboardingTutorial = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-4"
-          onClick={handleSkip}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-
         <DialogHeader>
           <DialogTitle className="text-2xl text-center">
             Bienvenue sur Koino ! 🎉
