@@ -14,17 +14,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { itemSchema } from "@/lib/validations";
 import LocationInput from "@/components/LocationInput";
 import SEO from "@/components/SEO";
+import MultiImageUpload from "@/components/MultiImageUpload";
+
+interface ImageItem {
+  file: File;
+  preview: string;
+  id: string;
+}
 
 const AddItem = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -68,41 +74,6 @@ const AddItem = () => {
     { value: "200_plus", label: "€€€€€€ (200€+)" },
   ];
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Fichier trop volumineux",
-          description: "La taille maximale est de 5 MB.",
-          variant: "destructive",
-        });
-        e.target.value = ""; // Reset input
-        return;
-      }
-
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: "Format non supporté",
-          description: "Seuls les formats JPEG, PNG et WebP sont acceptés.",
-          variant: "destructive",
-        });
-        e.target.value = ""; // Reset input
-        return;
-      }
-
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -134,15 +105,17 @@ const AddItem = () => {
         return;
       }
 
-      let imageUrl = "";
+      let mainImageUrl = "";
 
-      // Upload image if provided
-      if (imageFile) {
-        const fileExt = imageFile.name.split(".").pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
+      // Upload all images
+      const uploadedImageUrls: string[] = [];
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        const fileExt = image.file.name.split(".").pop();
+        const fileName = `${user.id}-${Date.now()}-${i}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
           .from("items")
-          .upload(fileName, imageFile);
+          .upload(fileName, image.file);
 
         if (uploadError) throw uploadError;
 
@@ -150,11 +123,12 @@ const AddItem = () => {
           data: { publicUrl },
         } = supabase.storage.from("items").getPublicUrl(fileName);
 
-        imageUrl = publicUrl;
+        uploadedImageUrls.push(publicUrl);
+        if (i === 0) mainImageUrl = publicUrl;
       }
 
-      // Insert item
-      const { error: insertError } = await supabase.from("items").insert({
+      // Insert item with main image
+      const { data: itemData, error: insertError } = await supabase.from("items").insert({
         user_id: user.id,
         title: formData.title,
         description: formData.description,
@@ -162,14 +136,32 @@ const AddItem = () => {
         location: formData.location,
         latitude: formData.latitude || null,
         longitude: formData.longitude || null,
-        image_url: imageUrl,
+        image_url: mainImageUrl,
         brand: formData.brand || null,
         condition: formData.condition || null,
         price_range: formData.price_range || null,
         estimated_value: formData.estimated_value ? parseFloat(formData.estimated_value) : null,
-      });
+      }).select().single();
 
       if (insertError) throw insertError;
+
+      // Insert additional images into item_images table
+      if (uploadedImageUrls.length > 0 && itemData) {
+        const imageInserts = uploadedImageUrls.map((url, index) => ({
+          item_id: itemData.id,
+          image_url: url,
+          display_order: index,
+        }));
+
+        // Using type assertion since item_images table was just created
+        const { error: imagesError } = await (supabase
+          .from("item_images" as any)
+          .insert(imageInserts as any));
+
+        if (imagesError) {
+          console.error("Error saving additional images:", imagesError);
+        }
+      }
 
       toast({
         title: "Objet publié !",
@@ -200,49 +192,15 @@ const AddItem = () => {
         <h1 className="text-3xl font-bold mb-8">Proposer un objet</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Image Upload */}
+          {/* Multi Image Upload */}
           <div>
-            <Label htmlFor="image">Photo de l'objet</Label>
+            <Label>Photos de l'objet (max 5)</Label>
             <div className="mt-2">
-              {imagePreview ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={() => {
-                      setImageFile(null);
-                      setImagePreview("");
-                    }}
-                  >
-                    Changer
-                  </Button>
-                </div>
-              ) : (
-                <label
-                  htmlFor="image"
-                  className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
-                >
-                  <Upload className="h-12 w-12 text-muted-foreground mb-2" />
-                  <span className="text-sm text-muted-foreground">
-                    Cliquez pour ajouter une photo
-                  </span>
-                  <input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                </label>
-              )}
+              <MultiImageUpload
+                images={images}
+                onImagesChange={setImages}
+                maxImages={5}
+              />
             </div>
           </div>
 

@@ -4,9 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Check, CheckCheck } from "lucide-react";
 import Header from "@/components/Header";
 import { messageSchema } from "@/lib/validations";
+import TypingIndicator from "@/components/TypingIndicator";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface MatchChatProps {
   matchId: string;
@@ -18,6 +21,7 @@ interface Message {
   content: string;
   sender_id: string;
   created_at: string;
+  read_at: string | null;
 }
 
 const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
@@ -27,6 +31,23 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
   const [matchInfo, setMatchInfo] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { sendNotification, requestPermission, permission } = usePushNotifications();
+
+  const otherUserName = matchInfo
+    ? matchInfo.user1_id === user?.id
+      ? matchInfo.user2?.full_name
+      : matchInfo.user1?.full_name
+    : "Utilisateur";
+
+  const { typingUsers, setTyping } = useTypingIndicator({
+    channelName: matchId,
+    userId: user?.id || null,
+    userName: matchInfo
+      ? matchInfo.user1_id === user?.id
+        ? matchInfo.user1?.full_name
+        : matchInfo.user2?.full_name
+      : "Utilisateur",
+  });
 
   useEffect(() => {
     loadUser();
@@ -45,10 +66,39 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
           filter: `match_id=eq.${matchId}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+          const newMsg = payload.new as Message;
+          setMessages((prev) => [...prev, newMsg]);
+          
+          // Show notification if message is from other user
+          if (newMsg.sender_id !== user?.id) {
+            sendNotification("Nouveau message", {
+              body: newMsg.content.slice(0, 100),
+              tag: `message-${matchId}`,
+            });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `match_id=eq.${matchId}`,
+        },
+        (payload) => {
+          const updatedMsg = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
+          );
         }
       )
       .subscribe();
+
+    // Request notification permission
+    if (permission === "default") {
+      requestPermission();
+    }
 
     return () => {
       supabase.removeChannel(channel);
@@ -57,6 +107,7 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
 
   useEffect(() => {
     scrollToBottom();
+    markMessagesAsRead();
   }, [messages]);
 
   const scrollToBottom = () => {
@@ -98,12 +149,48 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
       return;
     }
 
-    setMessages(data || []);
+    setMessages((data || []) as unknown as Message[]);
+  };
+
+  const markMessagesAsRead = async () => {
+    if (!user) return;
+
+    // Find unread messages from other user
+    const unreadMessages = messages.filter(
+      (m) => m.sender_id !== user.id && !m.read_at
+    );
+
+    if (unreadMessages.length === 0) return;
+
+    // Mark them as read (using type assertion since read_at column was just added)
+    const { error } = await (supabase
+      .from("messages")
+      .update({ read_at: new Date().toISOString() } as any)
+      .in(
+        "id",
+        unreadMessages.map((m) => m.id)
+      ));
+
+    if (error) {
+      console.error("Error marking messages as read:", error);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    if (e.target.value.trim()) {
+      setTyping(true);
+    } else {
+      setTyping(false);
+    }
   };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
+
+    // Stop typing indicator
+    setTyping(false);
 
     // Validate message
     const validation = messageSchema.safeParse({ content: newMessage });
@@ -133,12 +220,6 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
 
     setNewMessage("");
   };
-
-  const otherUserName = matchInfo
-    ? matchInfo.user1_id === user?.id
-      ? matchInfo.user2?.full_name
-      : matchInfo.user1?.full_name
-    : "Utilisateur";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -172,23 +253,44 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
                     }`}
                   >
                     <p>{message.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <div className="flex items-center gap-1 justify-end mt-1">
+                      <span className="text-xs opacity-70">
+                        {new Date(message.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      {isOwn && (
+                        <span className="ml-1">
+                          {message.read_at ? (
+                            <CheckCheck className="h-3 w-3 inline opacity-90" />
+                          ) : (
+                            <Check className="h-3 w-3 inline opacity-70" />
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             })}
+            
+            {/* Typing indicator */}
+            {typingUsers.length > 0 && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-2xl px-4 py-2">
+                  <TypingIndicator userName={typingUsers[0].name} />
+                </div>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
 
           <form onSubmit={sendMessage} className="flex gap-2">
             <Input
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={handleInputChange}
               placeholder="Tapez votre message..."
               className="flex-1"
               maxLength={1000}
