@@ -44,62 +44,37 @@ const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
   const loadItems = async () => {
     setLoading(true);
     try {
-      // If distance filter is active, we need to fetch all items and filter client-side
-      // or use a more complex query with the distance function
+      // If distance filter is active, use optimized single-query function
       if (userCoordinates && maxDistance) {
-        let query = supabase
-          .from("items")
-          .select("*", { count: "exact" })
-          .eq("is_active", true)
-          .not("latitude", "is", null)
-          .not("longitude", "is", null);
-
-        // Apply category filter
-        if (selectedCategory !== "all") {
-          query = query.eq("category", selectedCategory);
-        }
-
-        // Apply search filter with sanitization
+        // Sanitize search query
+        let sanitizedSearch: string | null = null;
         if (searchQuery && searchQuery.trim()) {
-          const sanitized = searchQuery
+          sanitizedSearch = searchQuery
             .trim()
-            .replace(/[^\\w\\s\\u00C0-\\u017F-]/g, '')
+            .replace(/[^\w\s\u00C0-\u017F-]/g, '')
             .slice(0, 100)
-            .toLowerCase();
-          
-          if (sanitized) {
-            query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
-          }
+            .toLowerCase() || null;
         }
 
-        const { data: allItems, error } = await query.order("created_at", { ascending: false });
+        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+        const { data, error } = await supabase.rpc("get_items_within_distance", {
+          user_lat: userCoordinates.latitude,
+          user_lon: userCoordinates.longitude,
+          max_distance_km: maxDistance,
+          category_filter: selectedCategory === "all" ? null : selectedCategory,
+          search_filter: sanitizedSearch,
+          page_offset: offset,
+          page_limit: ITEMS_PER_PAGE,
+        });
 
         if (error) throw error;
 
-        // Filter by distance using the SQL function
-        const itemsWithDistance = await Promise.all(
-          (allItems || []).map(async (item) => {
-            const { data: distanceData } = await supabase.rpc("calculate_distance", {
-              lat1: userCoordinates.latitude,
-              lon1: userCoordinates.longitude,
-              lat2: item.latitude,
-              lon2: item.longitude,
-            });
-            return { ...item, distance: distanceData };
-          })
-        );
-
-        const filteredItems = itemsWithDistance
-          .filter((item) => item.distance !== null && item.distance <= maxDistance)
-          .sort((a, b) => (a.distance || 0) - (b.distance || 0));
-
-        // Apply pagination
-        const from = (currentPage - 1) * ITEMS_PER_PAGE;
-        const to = from + ITEMS_PER_PAGE;
-        const paginatedItems = filteredItems.slice(from, to);
-
-        setItems(paginatedItems);
-        setTotalCount(filteredItems.length);
+        // Extract total count from first row (all rows have same total_count)
+        const totalFromQuery = data && data.length > 0 ? Number(data[0].total_count) : 0;
+        
+        setItems(data || []);
+        setTotalCount(totalFromQuery);
       } else {
         // Normal query without distance filter
         let query = supabase

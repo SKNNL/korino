@@ -535,6 +535,29 @@ export type Database = {
         Args: { user_id_to_delete: string }
         Returns: undefined
       }
+      get_items_within_distance: {
+        Args: {
+          category_filter?: string
+          max_distance_km: number
+          page_limit?: number
+          page_offset?: number
+          search_filter?: string
+          user_lat: number
+          user_lon: number
+        }
+        Returns: {
+          category: string
+          created_at: string
+          description: string
+          distance: number
+          id: string
+          image_url: string
+          location: string
+          title: string
+          total_count: number
+          user_id: string
+        }[]
+      }
       get_user_average_rating: { Args: { user_id: string }; Returns: number }
       get_user_co2_saved: { Args: { user_id_param: string }; Returns: number }
       get_user_stats: {
