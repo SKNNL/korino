@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, Flag, Heart } from "lucide-react";
 import ExchangeProposalModal from "@/components/ExchangeProposalModal";
 import ReportModal from "@/components/ReportModal";
+import ImageCarousel from "@/components/ImageCarousel";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,10 +43,8 @@ const ItemCard = ({ title, description, category, location, date, image, image_u
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteId, setFavoriteId] = useState<string | null>(null);
   const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
+  const [allImages, setAllImages] = useState<string[]>([]);
   const { toast } = useToast();
-  
-  // Use image_url from database or fallback to image prop or placeholder
-  const displayImage = image_url || image || "/placeholder.svg";
   
   // Format date - use date prop or format created_at
   const displayDate = date || (created_at ? formatDate(created_at) : "Récemment");
@@ -53,8 +52,34 @@ const ItemCard = ({ title, description, category, location, date, image, image_u
   useEffect(() => {
     if (itemId) {
       checkFavoriteStatus();
+      loadItemImages();
     }
   }, [itemId]);
+
+  const loadItemImages = async () => {
+    if (!itemId) return;
+    
+    try {
+      // Fetch additional images from item_images table
+      const { data, error } = await (supabase
+        .from("item_images" as any)
+        .select("image_url, display_order")
+        .eq("item_id", itemId)
+        .order("display_order", { ascending: true })) as any;
+
+      if (!error && data && data.length > 0) {
+        setAllImages(data.map((img: any) => img.image_url));
+      } else {
+        // Fallback to single image
+        const displayImage = image_url || image || "/placeholder.svg";
+        setAllImages([displayImage]);
+      }
+    } catch (error) {
+      console.error("Error loading item images:", error);
+      const displayImage = image_url || image || "/placeholder.svg";
+      setAllImages([displayImage]);
+    }
+  };
 
   const checkFavoriteStatus = async () => {
     try {
@@ -143,11 +168,7 @@ const ItemCard = ({ title, description, category, location, date, image, image_u
     <>
     <Card className="group overflow-hidden border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-fade-in">
       <div className="aspect-square overflow-hidden bg-muted relative">
-        <img 
-          src={displayImage} 
-          alt={title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
-        />
+        <ImageCarousel images={allImages} alt={title} />
         <Button
           size="icon"
           variant="ghost"

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import ItemCard from "./ItemCard";
 import CategoryFilter from "./CategoryFilter";
 import DistanceFilter from "./DistanceFilter";
+import SaveSearchButton from "./SaveSearchButton";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
@@ -132,12 +133,19 @@ const ItemGrid = ({ searchQuery }: { searchQuery?: string } = {}) => {
   return (
     <section className="container mx-auto px-4 py-12">
       <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold">Objets disponibles</h2>
-          <p className="text-muted-foreground">
-            {totalCount} {totalCount > 1 ? "objets" : "objet"} {selectedCategory !== "all" ? `dans cette catégorie` : "au total"}
-            {userCoordinates && maxDistance && ` dans un rayon de ${maxDistance} km`}
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold">Objets disponibles</h2>
+            <p className="text-muted-foreground">
+              {totalCount} {totalCount > 1 ? "objets" : "objet"} {selectedCategory !== "all" ? `dans cette catégorie` : "au total"}
+              {userCoordinates && maxDistance && ` dans un rayon de ${maxDistance} km`}
+            </p>
+          </div>
+          <SaveSearchButton
+            category={selectedCategory}
+            maxDistance={maxDistance}
+            searchQuery={searchQuery || ""}
+          />
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

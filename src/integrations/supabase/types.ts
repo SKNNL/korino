@@ -473,6 +473,39 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_searches: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          max_distance_km: number | null
+          name: string
+          notify_new_items: boolean | null
+          search_query: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          max_distance_km?: number | null
+          name: string
+          notify_new_items?: boolean | null
+          search_query?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          max_distance_km?: number | null
+          name?: string
+          notify_new_items?: boolean | null
+          search_query?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       swipes: {
         Row: {
           created_at: string | null
