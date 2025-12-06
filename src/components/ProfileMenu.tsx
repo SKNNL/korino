@@ -1,4 +1,4 @@
-import { User, Heart, Package, Settings, LogOut, BarChart3 } from "lucide-react";
+import { User, Heart, Package, Settings, LogOut, BarChart3, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,10 @@ const ProfileMenu = () => {
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/favorites")}>
           <Heart className="mr-2 h-4 w-4" />
           <span>Mes favoris</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/saved-searches")}>
+          <Search className="mr-2 h-4 w-4" />
+          <span>Mes recherches</span>
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/settings")}>
           <Settings className="mr-2 h-4 w-4" />

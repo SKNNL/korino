@@ -15,6 +15,7 @@ import Favorites from "./pages/Favorites";
 import Settings from "./pages/Settings";
 import InterestMessages from "./pages/InterestMessages";
 import PublicDashboard from "./pages/PublicDashboard";
+import SavedSearches from "./pages/SavedSearches";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/interest-messages" element={<InterestMessages />} />
           <Route path="/dashboard/:userId" element={<PublicDashboard />} />
+          <Route path="/saved-searches" element={<SavedSearches />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
