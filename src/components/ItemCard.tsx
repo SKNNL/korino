@@ -61,11 +61,11 @@ const ItemCard = ({ title, description, category, location, date, image, image_u
     
     try {
       // Fetch additional images from item_images table
-      const { data, error } = await (supabase
-        .from("item_images" as any)
+      const { data, error } = await supabase
+        .from("item_images")
         .select("image_url, display_order")
         .eq("item_id", itemId)
-        .order("display_order", { ascending: true })) as any;
+        .order("display_order", { ascending: true });
 
       if (!error && data && data.length > 0) {
         setAllImages(data.map((img: any) => img.image_url));
