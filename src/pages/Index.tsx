@@ -11,9 +11,9 @@ const Index = () => {
   const schema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Koino",
+    "name": "Nexus",
     "description": "Plateforme d'échange d'objets entre particuliers. Troc solidaire et écologique.",
-    "url": "https://koino.app",
+    "url": "https://nexus.app",
   };
 
   return (

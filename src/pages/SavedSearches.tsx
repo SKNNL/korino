@@ -235,7 +235,7 @@ const SavedSearches = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Mes recherches sauvegardées | Koino"
+        title="Mes recherches sauvegardées | Nexus"
         description="Gérez vos recherches sauvegardées et recevez des alertes pour les nouveaux objets."
       />
       <Header />
