@@ -65,7 +65,7 @@ const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearc
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <Package className="h-6 w-6 text-primary" />
-            <span className="text-2xl font-bold text-foreground">Koino</span>
+            <span className="text-2xl font-bold text-foreground">Nexus</span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-6">
