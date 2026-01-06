@@ -591,6 +591,18 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_public_profile: {
+        Args: { profile_id: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          created_at: string
+          full_name: string
+          id: string
+          is_verified: boolean
+          location: string
+        }[]
+      }
       get_user_average_rating: { Args: { user_id: string }; Returns: number }
       get_user_co2_saved: { Args: { user_id_param: string }; Returns: number }
       get_user_stats: {
