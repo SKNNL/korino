@@ -153,10 +153,9 @@ const AddItem = () => {
           display_order: index,
         }));
 
-        // Using type assertion since item_images table was just created
-        const { error: imagesError } = await (supabase
-          .from("item_images" as any)
-          .insert(imageInserts as any));
+        const { error: imagesError } = await supabase
+          .from("item_images")
+          .insert(imageInserts);
 
         if (imagesError) {
           console.error("Error saving additional images:", imagesError);

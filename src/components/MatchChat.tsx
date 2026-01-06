@@ -162,14 +162,14 @@ const MatchChat = ({ matchId, onBack }: MatchChatProps) => {
 
     if (unreadMessages.length === 0) return;
 
-    // Mark them as read (using type assertion since read_at column was just added)
-    const { error } = await (supabase
+    // Mark them as read
+    const { error } = await supabase
       .from("messages")
-      .update({ read_at: new Date().toISOString() } as any)
+      .update({ read_at: new Date().toISOString() })
       .in(
         "id",
         unreadMessages.map((m) => m.id)
-      ));
+      );
 
     if (error) {
       console.error("Error marking messages as read:", error);

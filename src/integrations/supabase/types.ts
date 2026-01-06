@@ -125,6 +125,38 @@ export type Database = {
           },
         ]
       }
+      item_images: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          id: string
+          image_url: string
+          item_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          image_url: string
+          item_id: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_images_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
           brand: string | null
@@ -282,6 +314,7 @@ export type Database = {
           created_at: string | null
           id: string
           match_id: string
+          read_at: string | null
           sender_id: string
         }
         Insert: {
@@ -289,6 +322,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           match_id: string
+          read_at?: string | null
           sender_id: string
         }
         Update: {
@@ -296,6 +330,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           match_id?: string
+          read_at?: string | null
           sender_id?: string
         }
         Relationships: [
