@@ -11,9 +11,9 @@ const Index = () => {
   const schema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Nexus",
+    "name": "Relio",
     "description": "Plateforme d'échange d'objets entre particuliers. Troc solidaire et écologique.",
-    "url": "https://nexus.app",
+    "url": "https://relio.app",
   };
 
   return (

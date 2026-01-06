@@ -10,14 +10,14 @@ interface SEOProps {
 }
 
 const SEO = ({
-  title = "Nexus - Échangez vos objets, partagez l'essentiel",
+  title = "Relio - Échangez vos objets, partagez l'essentiel",
   description = "Plateforme d'échange d'objets entre particuliers. Donnez une seconde vie à vos objets et trouvez ce dont vous avez besoin grâce au troc solidaire.",
   image = "https://lovable.dev/opengraph-image-p98pqg.png",
   type = "website",
   url,
   schema,
 }: SEOProps) => {
-  const fullTitle = title.includes("Nexus") ? title : `${title} | Nexus`;
+  const fullTitle = title.includes("Relio") ? title : `${title} | Relio`;
 
   return (
     <Helmet>

@@ -106,7 +106,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <Package className="h-8 w-8 text-primary" />
-          <span className="text-3xl font-bold text-foreground">Nexus</span>
+          <span className="text-3xl font-bold text-foreground">Relio</span>
         </div>
 
         <Tabs defaultValue="signin" className="w-full">

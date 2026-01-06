@@ -27,8 +27,8 @@ const CommentCaMarche = () => {
   const schema = {
     "@context": "https://schema.org",
     "@type": "HowTo",
-    "name": "Comment échanger des objets sur Nexus",
-    "description": "Guide étape par étape pour échanger vos objets sur Nexus",
+    "name": "Comment échanger des objets sur Relio",
+    "description": "Guide étape par étape pour échanger vos objets sur Relio",
     "step": [
       {
         "@type": "HowToStep",
@@ -89,7 +89,7 @@ const CommentCaMarche = () => {
 
           {/* Benefits */}
           <div className="bg-gradient-to-br from-primary/5 via-background to-accent/5 rounded-2xl p-8 space-y-6">
-            <h2 className="text-2xl font-bold text-center">Pourquoi échanger sur Nexus ?</h2>
+            <h2 className="text-2xl font-bold text-center">Pourquoi échanger sur Relio ?</h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <h3 className="font-semibold text-lg">🌱 Écologique</h3>
