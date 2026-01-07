@@ -103,7 +103,7 @@ const OnboardingTutorial = () => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl text-center">
-            Bienvenue sur Relio ! 🎉
+            Bienvenue sur TradeIt ! 🎉
           </DialogTitle>
           <DialogDescription className="text-center">
             Découvrez comment échanger vos objets
