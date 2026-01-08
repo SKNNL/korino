@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +19,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, MessageSquare } from "lucide-react";
 import { messageTemplateSchema } from "@/lib/validations";
+import { auth } from "@/lib/localStore";
 
 interface MessageTemplate {
   id: string;
@@ -30,6 +30,8 @@ interface MessageTemplate {
 interface MessageTemplatesProps {
   onSelectTemplate?: (content: string) => void;
 }
+
+const STORAGE_KEY = "tradeit_message_templates";
 
 const MessageTemplates = ({ onSelectTemplate }: MessageTemplatesProps) => {
   const { toast } = useToast();
@@ -42,24 +44,21 @@ const MessageTemplates = ({ onSelectTemplate }: MessageTemplatesProps) => {
     loadTemplates();
   }, []);
 
-  const loadTemplates = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const loadTemplates = () => {
+    const user = auth.getCurrentUser();
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from("message_templates")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setTemplates(data);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const allTemplates = stored ? JSON.parse(stored) : [];
+      const userTemplates = allTemplates.filter((t: any) => t.user_id === user.id);
+      setTemplates(userTemplates);
+    } catch (error) {
+      console.error("Error loading templates:", error);
     }
   };
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     // Validate with schema
     const validation = messageTemplateSchema.safeParse({
       title: newTitle.trim(),
@@ -75,58 +74,62 @@ const MessageTemplates = ({ onSelectTemplate }: MessageTemplatesProps) => {
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = auth.getCurrentUser();
     if (!user) return;
 
-    const { error } = await supabase.from("message_templates").insert({
-      user_id: user.id,
-      title: validation.data.title,
-      content: validation.data.content,
-    });
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const allTemplates = stored ? JSON.parse(stored) : [];
+      
+      const newTemplate = {
+        id: Math.random().toString(36).substring(2, 15),
+        user_id: user.id,
+        title: validation.data.title,
+        content: validation.data.content,
+        created_at: new Date().toISOString(),
+      };
+      
+      allTemplates.push(newTemplate);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allTemplates));
 
-    if (error) {
+      toast({
+        title: "Modèle créé",
+        description: "Votre modèle de message a été créé",
+      });
+
+      setNewTitle("");
+      setNewContent("");
+      setDialogOpen(false);
+      loadTemplates();
+    } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de créer le modèle",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Modèle créé",
-      description: "Votre modèle de message a été créé",
-    });
-
-    setNewTitle("");
-    setNewContent("");
-    setDialogOpen(false);
-    loadTemplates();
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase
-      .from("message_templates")
-      .delete()
-      .eq("id", id);
+  const handleDelete = (id: string) => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const allTemplates = stored ? JSON.parse(stored) : [];
+      const filtered = allTemplates.filter((t: any) => t.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 
-    if (error) {
+      toast({
+        title: "Modèle supprimé",
+        description: "Le modèle a été supprimé",
+      });
+
+      loadTemplates();
+    } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de supprimer le modèle",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Modèle supprimé",
-      description: "Le modèle a été supprimé",
-    });
-
-    loadTemplates();
   };
 
   return (

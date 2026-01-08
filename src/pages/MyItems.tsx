@@ -1,60 +1,42 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, PlusCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import ItemCard from "@/components/ItemCard";
+import { auth, items as itemsStore, Item } from "@/lib/localStore";
 
 const ITEMS_PER_PAGE = 9;
 
 const MyItems = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     loadMyItems();
   }, [currentPage]);
 
-  const loadMyItems = async () => {
+  const loadMyItems = () => {
     setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-
-      const { data, error, count } = await supabase
-        .from("items")
-        .select("*", { count: "exact" })
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-      setItems(data || []);
-      setTotalCount(count || 0);
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger vos objets.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    
+    const user = auth.getCurrentUser();
+    if (!user) {
+      navigate("/auth");
+      return;
     }
+
+    const userItems = itemsStore.getByUser(user.id);
+    setItems(userItems);
+    setLoading(false);
   };
 
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+  const paginatedItems = items.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,8 +73,18 @@ const MyItems = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[400px]">
-              {items.map((item) => (
-                <ItemCard key={item.id} {...item} />
+              {paginatedItems.map((item) => (
+                <ItemCard 
+                  key={item.id} 
+                  title={item.title}
+                  description={item.description}
+                  category={item.category}
+                  location={item.location}
+                  image_url={item.image_url}
+                  created_at={item.created_at}
+                  itemId={item.id}
+                  ownerId={item.user_id}
+                />
               ))}
             </div>
 

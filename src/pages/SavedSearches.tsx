@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Trash2, Edit2, Bell, BellOff, MapPin, Tag, ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import Header from "@/components/Header";
 import SEO from "@/components/SEO";
+import { auth } from "@/lib/localStore";
 
 interface SavedSearch {
   id: string;
@@ -42,9 +42,11 @@ interface SavedSearch {
   search_query: string | null;
   category: string | null;
   max_distance_km: number | null;
-  notify_new_items: boolean | null;
-  created_at: string | null;
+  notify_new_items: boolean;
+  created_at: string;
 }
+
+const STORAGE_KEY = "tradeit_saved_searches";
 
 const categories = [
   { value: "all", label: "Toutes catégories" },
@@ -76,29 +78,20 @@ const SavedSearches = () => {
     fetchSavedSearches();
   }, []);
 
-  const fetchSavedSearches = async () => {
+  const fetchSavedSearches = () => {
+    const user = auth.getCurrentUser();
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("saved_searches")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setSavedSearches(data || []);
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const allSearches: SavedSearch[] = stored ? JSON.parse(stored) : [];
+      const userSearches = allSearches.filter((s: any) => s.user_id === user.id);
+      setSavedSearches(userSearches);
     } catch (error) {
       console.error("Error fetching saved searches:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les recherches sauvegardées.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -115,22 +108,25 @@ const SavedSearches = () => {
     });
   };
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = () => {
     if (!editingSearch) return;
 
     try {
-      const { error } = await supabase
-        .from("saved_searches")
-        .update({
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const allSearches: any[] = stored ? JSON.parse(stored) : [];
+      const index = allSearches.findIndex(s => s.id === editingSearch.id);
+      
+      if (index !== -1) {
+        allSearches[index] = {
+          ...allSearches[index],
           name: editForm.name,
           search_query: editForm.search_query || null,
           category: editForm.category === "all" ? null : editForm.category,
           max_distance_km: editForm.max_distance_km,
           notify_new_items: editForm.notify_new_items,
-        })
-        .eq("id", editingSearch.id);
-
-      if (error) throw error;
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allSearches));
+      }
 
       toast({
         title: "Recherche modifiée",
@@ -149,16 +145,14 @@ const SavedSearches = () => {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!deleteSearch) return;
 
     try {
-      const { error } = await supabase
-        .from("saved_searches")
-        .delete()
-        .eq("id", deleteSearch.id);
-
-      if (error) throw error;
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const allSearches: any[] = stored ? JSON.parse(stored) : [];
+      const filtered = allSearches.filter(s => s.id !== deleteSearch.id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 
       toast({
         title: "Recherche supprimée",
@@ -177,14 +171,16 @@ const SavedSearches = () => {
     }
   };
 
-  const toggleNotifications = async (search: SavedSearch) => {
+  const toggleNotifications = (search: SavedSearch) => {
     try {
-      const { error } = await supabase
-        .from("saved_searches")
-        .update({ notify_new_items: !search.notify_new_items })
-        .eq("id", search.id);
-
-      if (error) throw error;
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const allSearches: any[] = stored ? JSON.parse(stored) : [];
+      const index = allSearches.findIndex(s => s.id === search.id);
+      
+      if (index !== -1) {
+        allSearches[index].notify_new_items = !search.notify_new_items;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allSearches));
+      }
 
       setSavedSearches(searches =>
         searches.map(s =>
@@ -200,11 +196,6 @@ const SavedSearches = () => {
       });
     } catch (error) {
       console.error("Error toggling notifications:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier les notifications.",
-        variant: "destructive",
-      });
     }
   };
 

@@ -10,10 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle } from "lucide-react";
 import { reportSchema } from "@/lib/validations";
+import { auth } from "@/lib/localStore";
 
 interface ReportModalProps {
   open: boolean;
@@ -27,7 +27,6 @@ const ReportModal = ({
   open,
   onOpenChange,
   targetType,
-  targetId,
   targetName,
 }: ReportModalProps) => {
   const { toast } = useToast();
@@ -42,7 +41,7 @@ const ReportModal = ({
     { value: "other", label: "Autre" },
   ];
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     // Validate with schema
     const validation = reportSchema.safeParse({
       reason,
@@ -58,30 +57,20 @@ const ReportModal = ({
       return;
     }
 
+    const user = auth.getCurrentUser();
+    if (!user) {
+      toast({
+        title: "Non authentifié",
+        description: "Vous devez être connecté pour signaler",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Non authentifié");
-
-      const reportData: any = {
-        reporter_id: user.id,
-        reason: validation.data.reason,
-        description: validation.data.description,
-      };
-
-      if (targetType === "user") {
-        reportData.reported_user_id = targetId;
-      } else {
-        reportData.reported_item_id = targetId;
-      }
-
-      const { error } = await supabase.from("reports").insert(reportData);
-
-      if (error) throw error;
-
+    // Simulate sending report (demo mode)
+    setTimeout(() => {
       toast({
         title: "Signalement envoyé",
         description: "Merci pour votre signalement. Nous allons l'examiner rapidement.",
@@ -90,16 +79,8 @@ const ReportModal = ({
       onOpenChange(false);
       setDescription("");
       setReason("spam");
-    } catch (error: any) {
-      console.error("Error submitting report:", error);
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible d'envoyer le signalement",
-        variant: "destructive",
-      });
-    } finally {
       setLoading(false);
-    }
+    }, 500);
   };
 
   return (

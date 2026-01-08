@@ -9,9 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Star } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { reviewSchema } from "@/lib/validations";
+import { auth } from "@/lib/localStore";
 
 interface ReviewModalProps {
   open: boolean;
@@ -24,8 +24,6 @@ interface ReviewModalProps {
 const ReviewModal = ({
   open,
   onOpenChange,
-  matchId,
-  reviewedUserId,
   reviewedUserName,
 }: ReviewModalProps) => {
   const { toast } = useToast();
@@ -34,7 +32,7 @@ const ReviewModal = ({
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     // Validate with schema
     const validation = reviewSchema.safeParse({
       rating,
@@ -50,45 +48,30 @@ const ReviewModal = ({
       return;
     }
 
+    const user = auth.getCurrentUser();
+    if (!user) {
+      toast({
+        title: "Non authentifié",
+        description: "Vous devez être connecté",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("Non authentifié");
-      }
-
-      const { error } = await supabase.from("reviews").insert({
-        match_id: matchId,
-        reviewer_id: user.id,
-        reviewed_user_id: reviewedUserId,
-        rating: validation.data.rating,
-        comment: validation.data.comment || null,
-      });
-
-      if (error) throw error;
-
+    // Simulate saving review (demo mode)
+    setTimeout(() => {
       toast({
         title: "Avis publié",
-        description: "Merci pour votre retour !",
+        description: "Merci pour votre retour ! (démo)",
       });
 
       onOpenChange(false);
       setRating(0);
       setComment("");
-    } catch (error: any) {
-      console.error("Error submitting review:", error);
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible de publier l'avis",
-        variant: "destructive",
-      });
-    } finally {
       setLoading(false);
-    }
+    }, 500);
   };
 
   return (

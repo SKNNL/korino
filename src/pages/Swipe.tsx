@@ -1,27 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useMotionValue, useTransform } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { X, Heart, ArrowLeft, Sparkles, Flag, Repeat } from "lucide-react";
 import Header from "@/components/Header";
 import MatchModal from "@/components/MatchModal";
-import ExchangeProposalModal from "@/components/ExchangeProposalModal";
-import ReportModal from "@/components/ReportModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { messageSchema } from "@/lib/validations";
-
-interface Item {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  image_url: string;
-  location: string;
-  user_id: string;
-}
+import { auth, items as itemsStore, swipes as swipesStore, Item } from "@/lib/localStore";
 
 const Swipe = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -32,8 +20,6 @@ const Swipe = () => {
   const [showMessageDialog, setShowMessageDialog] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [pendingSwipeItem, setPendingSwipeItem] = useState<Item | null>(null);
-  const [showExchangeModal, setShowExchangeModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const x = useMotionValue(0);
@@ -41,56 +27,30 @@ const Swipe = () => {
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
 
   useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const currentUser = auth.getCurrentUser();
+    if (!currentUser) {
       navigate("/auth");
       return;
     }
-    setUser(session.user);
-    loadItems(session.user.id);
+    setUser(currentUser);
+    loadItems(currentUser.id);
+  }, [navigate]);
+
+  const loadItems = (userId: string) => {
+    // Get all items except user's own
+    const allItems = itemsStore.getAll();
+    const userSwipes = swipesStore.getByUser(userId);
+    const swipedIds = userSwipes.map(s => s.item_id);
+    
+    // Filter out user's items and already swiped items
+    const availableItems = allItems.filter(item => 
+      item.user_id !== userId && !swipedIds.includes(item.id)
+    );
+    
+    setItems(availableItems);
   };
 
-  const loadItems = async (userId: string) => {
-    try {
-      // Récupérer les items que l'utilisateur n'a pas encore swipé
-      const { data: swipedItems } = await supabase
-        .from("swipes")
-        .select("item_id")
-        .eq("user_id", userId);
-
-      const swipedIds = swipedItems?.map(s => s.item_id) || [];
-
-      let query = supabase
-        .from("items")
-        .select("*")
-        .neq("user_id", userId)
-        .eq("is_active", true)
-        .limit(50); // Load more items for better experience
-
-      // Exclude already swiped items
-      if (swipedIds.length > 0) {
-        query = query.not("id", "in", `(${swipedIds.join(",")})`);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      setItems(data || []);
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les objets",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSwipe = async (direction: "left" | "right") => {
+  const handleSwipe = (direction: "left" | "right") => {
     if (!user || currentIndex >= items.length) return;
 
     const currentItem = items[currentIndex];
@@ -103,69 +63,27 @@ const Swipe = () => {
     }
 
     // Pour les swipes à gauche, enregistrer directement
-    await recordSwipe(currentItem, direction);
+    recordSwipe(currentItem, direction);
   };
 
-  const recordSwipe = async (item: Item, direction: "left" | "right", message?: string) => {
-    // Enregistrer le swipe
-    const { error } = await supabase
-      .from("swipes")
-      .insert({
-        user_id: user.id,
-        item_id: item.id,
-        swipe_direction: direction,
-      });
+  const recordSwipe = (item: Item, direction: "left" | "right", _message?: string) => {
+    // Enregistrer le swipe et vérifier s'il y a un match
+    const result = swipesStore.create(user.id, item.id, direction);
 
-    if (error) {
+    if (result.match) {
+      setMatchedItem(item);
+      setShowMatch(true);
       toast({
-        title: "Erreur",
-        description: "Impossible d'enregistrer votre choix",
-        variant: "destructive",
+        title: "🎉 Match !",
+        description: "Vous pouvez maintenant discuter avec le propriétaire",
       });
-      return;
-    }
-
-    // Si un message est fourni avec le like
-    if (direction === "right" && message) {
-      const { error: msgError } = await supabase
-        .from("interest_messages")
-        .insert({
-          sender_id: user.id,
-          receiver_id: item.user_id,
-          item_id: item.id,
-          message: message,
-        });
-
-      if (msgError) {
-        console.error("Error sending message:", msgError);
-      }
-    }
-
-    // Vérifier s'il y a un match
-    if (direction === "right") {
-      const { data: newMatches } = await supabase
-        .from("matches")
-        .select("*, item1:item1_id(*), item2:item2_id(*)")
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (newMatches && newMatches.length > 0) {
-        const match = newMatches[0];
-        const justCreated = new Date(match.created_at).getTime() > Date.now() - 2000;
-        
-        if (justCreated) {
-          setMatchedItem(item);
-          setShowMatch(true);
-        }
-      }
     }
 
     // Passer à l'item suivant
     setCurrentIndex(prev => prev + 1);
   };
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (!pendingSwipeItem) return;
     
     // Validate message if provided
@@ -181,7 +99,7 @@ const Swipe = () => {
       }
     }
     
-    await recordSwipe(pendingSwipeItem, "right", messageText.trim() || undefined);
+    recordSwipe(pendingSwipeItem, "right", messageText.trim() || undefined);
     
     setShowMessageDialog(false);
     setMessageText("");
@@ -189,16 +107,16 @@ const Swipe = () => {
     
     if (messageText.trim()) {
       toast({
-        title: "Message envoyé !",
-        description: "Votre message a été envoyé avec votre like",
+        title: "Like envoyé !",
+        description: "Votre intérêt a été enregistré",
       });
     }
   };
 
-  const handleSkipMessage = async () => {
+  const handleSkipMessage = () => {
     if (!pendingSwipeItem) return;
     
-    await recordSwipe(pendingSwipeItem, "right");
+    recordSwipe(pendingSwipeItem, "right");
     
     setShowMessageDialog(false);
     setMessageText("");
@@ -293,7 +211,7 @@ const Swipe = () => {
                   size="icon"
                   variant="ghost"
                   className="h-12 w-12"
-                  onClick={() => setShowReportModal(true)}
+                  onClick={() => toast({ title: "Signalement", description: "Fonctionnalité de démonstration" })}
                   title="Signaler"
                 >
                   <Flag className="h-5 w-5" />
@@ -333,7 +251,7 @@ const Swipe = () => {
                   size="icon"
                   variant="ghost"
                   className="h-12 w-12"
-                  onClick={() => setShowExchangeModal(true)}
+                  onClick={() => toast({ title: "Échange", description: "Fonctionnalité de démonstration" })}
                   title="Proposer un échange"
                 >
                   <Repeat className="h-5 w-5" />
@@ -377,25 +295,6 @@ const Swipe = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {currentItem && (
-        <>
-          <ExchangeProposalModal
-            open={showExchangeModal}
-            onOpenChange={setShowExchangeModal}
-            receiverItemId={currentItem.id}
-            receiverItemTitle={currentItem.title}
-            receiverId={currentItem.user_id}
-          />
-          <ReportModal
-            open={showReportModal}
-            onOpenChange={setShowReportModal}
-            targetType="item"
-            targetId={currentItem.id}
-            targetName={currentItem.title}
-          />
-        </>
-      )}
     </div>
   );
 };
