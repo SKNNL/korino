@@ -9,16 +9,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { exchangeProposalSchema } from "@/lib/validations";
-
-interface Item {
-  id: string;
-  title: string;
-  image_url: string;
-}
+import { auth, items as itemsStore, Item } from "@/lib/localStore";
 
 interface ExchangeProposalModalProps {
   open: boolean;
@@ -31,9 +25,7 @@ interface ExchangeProposalModalProps {
 const ExchangeProposalModal = ({
   open,
   onOpenChange,
-  receiverItemId,
   receiverItemTitle,
-  receiverId,
 }: ExchangeProposalModalProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -42,29 +34,16 @@ const ExchangeProposalModal = ({
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const loadMyItems = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("items")
-        .select("id, title, image_url")
-        .eq("user_id", user.id)
-        .eq("is_active", true);
-
-      if (!error && data) {
-        setMyItems(data);
-      }
-    };
-
     if (open) {
-      loadMyItems();
+      const user = auth.getCurrentUser();
+      if (user) {
+        const userItems = itemsStore.getByUser(user.id).filter(i => i.is_active);
+        setMyItems(userItems);
+      }
     }
   }, [open]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (selectedItems.length === 0) {
       toast({
         title: "Erreur",
@@ -90,40 +69,18 @@ const ExchangeProposalModal = ({
 
     setLoading(true);
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Non authentifié");
-
-      const { error } = await supabase.from("exchange_proposals").insert({
-        sender_id: user.id,
-        receiver_id: receiverId,
-        sender_items: selectedItems,
-        receiver_item_id: receiverItemId,
-        message: validation.data.message || null,
-      });
-
-      if (error) throw error;
-
+    // Simulate sending proposal (demo mode)
+    setTimeout(() => {
       toast({
         title: "Proposition envoyée",
-        description: "Votre proposition d'échange a été envoyée avec succès",
+        description: "Votre proposition d'échange a été envoyée avec succès (démo)",
       });
 
       onOpenChange(false);
       setSelectedItems([]);
       setMessage("");
-    } catch (error: any) {
-      console.error("Error sending proposal:", error);
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible d'envoyer la proposition",
-        variant: "destructive",
-      });
-    } finally {
       setLoading(false);
-    }
+    }, 500);
   };
 
   const toggleItem = (itemId: string) => {

@@ -1,63 +1,46 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Heart, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import ItemCard from "@/components/ItemCard";
+import { auth, favorites as favoritesStore, items as itemsStore, Item } from "@/lib/localStore";
 
 const ITEMS_PER_PAGE = 9;
 
 const Favorites = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favoriteItems, setFavoriteItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     loadFavorites();
   }, [currentPage]);
 
-  const loadFavorites = async () => {
+  const loadFavorites = () => {
     setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-
-      const { data, error, count } = await supabase
-        .from("favorites")
-        .select(`
-          *,
-          items (*)
-        `, { count: "exact" })
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-      setFavorites(data?.map(f => f.items).filter(Boolean) || []);
-      setTotalCount(count || 0);
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger vos favoris.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    
+    const user = auth.getCurrentUser();
+    if (!user) {
+      navigate("/auth");
+      return;
     }
+
+    const userFavorites = favoritesStore.getByUser(user.id);
+    const items = userFavorites
+      .map(fav => itemsStore.getById(fav.item_id))
+      .filter((item): item is Item => item !== undefined);
+    
+    setFavoriteItems(items);
+    setLoading(false);
   };
 
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(favoriteItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = favoriteItems.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,7 +58,7 @@ const Favorites = () => {
           <div className="flex justify-center items-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : favorites.length === 0 ? (
+        ) : favoriteItems.length === 0 ? (
           <div className="text-center py-12">
             <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
@@ -88,10 +71,15 @@ const Favorites = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[400px]">
-              {favorites.map((item) => (
+              {paginatedItems.map((item) => (
                 <ItemCard 
                   key={item.id} 
-                  {...item} 
+                  title={item.title}
+                  description={item.description}
+                  category={item.category}
+                  location={item.location}
+                  image_url={item.image_url}
+                  created_at={item.created_at}
                   itemId={item.id}
                   ownerId={item.user_id}
                 />

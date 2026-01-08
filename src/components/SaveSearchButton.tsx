@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,12 +12,15 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Bookmark, Loader2 } from "lucide-react";
+import { auth } from "@/lib/localStore";
 
 interface SaveSearchButtonProps {
   category: string;
   maxDistance: number | null;
   searchQuery: string;
 }
+
+const STORAGE_KEY = "tradeit_saved_searches";
 
 const SaveSearchButton = ({
   category,
@@ -31,7 +33,7 @@ const SaveSearchButton = ({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!name.trim()) {
       toast({
         title: "Nom requis",
@@ -42,30 +44,35 @@ const SaveSearchButton = ({
     }
 
     setLoading(true);
+    
+    const user = auth.getCurrentUser();
+    if (!user) {
+      toast({
+        title: "Connexion requise",
+        description: "Vous devez être connecté pour sauvegarder une recherche",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        toast({
-          title: "Connexion requise",
-          description: "Vous devez être connecté pour sauvegarder une recherche",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { error } = await supabase.from("saved_searches").insert({
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const allSearches = stored ? JSON.parse(stored) : [];
+      
+      const newSearch = {
+        id: Math.random().toString(36).substring(2, 15),
         user_id: user.id,
         name: name.trim(),
         category: category !== "all" ? category : null,
         max_distance_km: maxDistance,
         search_query: searchQuery || null,
         notify_new_items: notifyNewItems,
-      });
-
-      if (error) throw error;
+        created_at: new Date().toISOString(),
+      };
+      
+      allSearches.push(newSearch);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allSearches));
 
       toast({
         title: "Recherche sauvegardée",
@@ -78,7 +85,7 @@ const SaveSearchButton = ({
       console.error("Error saving search:", error);
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de sauvegarder la recherche",
+        description: "Impossible de sauvegarder la recherche",
         variant: "destructive",
       });
     } finally {

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,7 @@ import { itemSchema } from "@/lib/validations";
 import LocationInput from "@/components/LocationInput";
 import SEO from "@/components/SEO";
 import MultiImageUpload from "@/components/MultiImageUpload";
+import { auth, items as itemsStore } from "@/lib/localStore";
 
 interface ImageItem {
   file: File;
@@ -53,6 +53,9 @@ const AddItem = () => {
     "Mobilier",
     "Sport",
     "Décoration",
+    "Maison",
+    "Loisirs",
+    "Jeux",
     "Autre",
   ];
 
@@ -91,9 +94,7 @@ const AddItem = () => {
     }
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = auth.getCurrentUser();
 
       if (!user) {
         toast({
@@ -105,62 +106,22 @@ const AddItem = () => {
         return;
       }
 
-      let mainImageUrl = "";
+      // Use first image preview as image_url (for demo, we use data URL)
+      const mainImageUrl = images.length > 0 ? images[0].preview : "";
 
-      // Upload all images
-      const uploadedImageUrls: string[] = [];
-      for (let i = 0; i < images.length; i++) {
-        const image = images[i];
-        const fileExt = image.file.name.split(".").pop();
-        const fileName = `${user.id}-${Date.now()}-${i}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("items")
-          .upload(fileName, image.file);
-
-        if (uploadError) throw uploadError;
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("items").getPublicUrl(fileName);
-
-        uploadedImageUrls.push(publicUrl);
-        if (i === 0) mainImageUrl = publicUrl;
-      }
-
-      // Insert item with main image
-      const { data: itemData, error: insertError } = await supabase.from("items").insert({
+      // Create item in local store
+      itemsStore.create({
         user_id: user.id,
         title: formData.title,
         description: formData.description,
         category: formData.category,
         location: formData.location,
-        latitude: formData.latitude || null,
-        longitude: formData.longitude || null,
         image_url: mainImageUrl,
-        brand: formData.brand || null,
-        condition: formData.condition || null,
-        price_range: formData.price_range || null,
-        estimated_value: formData.estimated_value ? parseFloat(formData.estimated_value) : null,
-      }).select().single();
-
-      if (insertError) throw insertError;
-
-      // Insert additional images into item_images table
-      if (uploadedImageUrls.length > 0 && itemData) {
-        const imageInserts = uploadedImageUrls.map((url, index) => ({
-          item_id: itemData.id,
-          image_url: url,
-          display_order: index,
-        }));
-
-        const { error: imagesError } = await supabase
-          .from("item_images")
-          .insert(imageInserts);
-
-        if (imagesError) {
-          console.error("Error saving additional images:", imagesError);
-        }
-      }
+        is_active: true,
+        brand: formData.brand || undefined,
+        condition: formData.condition || undefined,
+        estimated_value: formData.estimated_value ? parseFloat(formData.estimated_value) : undefined,
+      });
 
       toast({
         title: "Objet publié !",

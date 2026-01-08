@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -9,8 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
-import MessageTemplates from "@/components/MessageTemplates";
-import VerificationRequest from "@/components/VerificationRequest";
 import SEO from "@/components/SEO";
 import {
   AlertDialog,
@@ -23,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { auth } from "@/lib/localStore";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -33,94 +31,36 @@ const Settings = () => {
     matches: true,
     messages: true,
   });
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setEmail(user.email || "");
-        
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("email_notifications, match_notifications, message_notifications")
-          .eq("id", user.id)
-          .maybeSingle();
-        
-        if (profile) {
-          setNotifications({
-            email: profile.email_notifications ?? true,
-            matches: profile.match_notifications ?? true,
-            messages: profile.message_notifications ?? true,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error loading user data:", error);
+    const user = auth.getCurrentUser();
+    if (!user) {
+      navigate("/auth");
+      return;
     }
+    setEmail(user.email || "");
+  }, [navigate]);
+
+  const handleDeleteAccount = () => {
+    auth.signOut();
+    
+    toast({
+      title: "Compte déconnecté",
+      description: "Vous avez été déconnecté (mode démo).",
+    });
+    navigate("/");
   };
 
-  const handleDeleteAccount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase.rpc("delete_user_account", {
-        user_id_to_delete: user.id,
-      });
-
-      if (error) throw error;
-      await supabase.auth.signOut();
-      
-      toast({
-        title: "Compte supprimé",
-        description: "Votre compte a été supprimé avec succès.",
-      });
-      navigate("/");
-    } catch (error) {
-      console.error("Error deleting account:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le compte.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleNotificationChange = async (
-    field: "email_notifications" | "match_notifications" | "message_notifications",
+  const handleNotificationChange = (
+    field: "email" | "matches" | "messages",
     value: boolean
   ) => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({ [field]: value })
-        .eq("id", user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Préférences mises à jour",
-        description: "Vos préférences de notification ont été enregistrées",
-      });
-    } catch (error) {
-      console.error("Error updating preferences:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour les préférences",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    setNotifications(prev => ({ ...prev, [field]: value }));
+    
+    toast({
+      title: "Préférences mises à jour",
+      description: "Vos préférences de notification ont été enregistrées (démo)",
+    });
   };
 
   return (
@@ -137,10 +77,9 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile">Profil</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="templates">Modèles</TabsTrigger>
             <TabsTrigger value="account">Compte</TabsTrigger>
           </TabsList>
 
@@ -173,11 +112,7 @@ const Settings = () => {
                   </div>
                   <Switch
                     checked={notifications.email}
-                    onCheckedChange={(checked) => {
-                      setNotifications({ ...notifications, email: checked });
-                      handleNotificationChange("email_notifications", checked);
-                    }}
-                    disabled={loading}
+                    onCheckedChange={(checked) => handleNotificationChange("email", checked)}
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -187,11 +122,7 @@ const Settings = () => {
                   </div>
                   <Switch
                     checked={notifications.matches}
-                    onCheckedChange={(checked) => {
-                      setNotifications({ ...notifications, matches: checked });
-                      handleNotificationChange("match_notifications", checked);
-                    }}
-                    disabled={loading}
+                    onCheckedChange={(checked) => handleNotificationChange("matches", checked)}
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -201,47 +132,32 @@ const Settings = () => {
                   </div>
                   <Switch
                     checked={notifications.messages}
-                    onCheckedChange={(checked) => {
-                      setNotifications({ ...notifications, messages: checked });
-                      handleNotificationChange("message_notifications", checked);
-                    }}
-                    disabled={loading}
+                    onCheckedChange={(checked) => handleNotificationChange("messages", checked)}
                   />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="templates">
-            <Card>
-              <CardContent className="pt-6">
-                <MessageTemplates />
-              </CardContent>
-            </Card>
-            <div className="mt-6">
-              <VerificationRequest />
-            </div>
-          </TabsContent>
-
           <TabsContent value="account">
             <Card>
               <CardHeader>
-                <CardTitle>Supprimer le compte</CardTitle>
-                <CardDescription>Action irréversible</CardDescription>
+                <CardTitle>Déconnexion</CardTitle>
+                <CardDescription>Se déconnecter du compte</CardDescription>
               </CardHeader>
               <CardContent>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" className="w-full">
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Supprimer mon compte
+                      Se déconnecter
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Cette action supprimera toutes vos données définitivement.
+                        Vous allez être déconnecté de votre compte.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -250,7 +166,7 @@ const Settings = () => {
                         onClick={handleDeleteAccount}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
-                        Supprimer
+                        Se déconnecter
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +8,7 @@ import { Loader2, Leaf, TrendingUp, Package, Star, CheckCircle2, History } from 
 import UserRating from "@/components/UserRating";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SEO from "@/components/SEO";
+import { users as usersStore, items as itemsStore, matches as matchesStore } from "@/lib/localStore";
 
 interface UserStats {
   total_items: number;
@@ -20,94 +20,48 @@ interface UserStats {
   co2_saved: number;
 }
 
-interface Profile {
-  full_name: string;
-  avatar_url: string;
-  bio: string;
-  location: string;
-  is_verified: boolean;
-  created_at: string;
-}
-
-interface ExchangeHistory {
-  id: string;
-  created_at: string;
-  item1_title: string;
-  item2_title: string;
-  status: string;
-}
-
 const PublicDashboard = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
-  const [history, setHistory] = useState<ExchangeHistory[]>([]);
 
   useEffect(() => {
-    const loadUserData = async () => {
-      if (!userId) {
-        navigate("/");
-        return;
-      }
+    if (!userId) {
+      navigate("/");
+      return;
+    }
 
-      try {
-        // Load profile
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .single();
+    // Load user data from local store
+    const user = usersStore.getById(userId);
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-        if (profileError) throw profileError;
-        setProfile(profileData);
+    setProfile({
+      ...user,
+      is_verified: false,
+      created_at: new Date().toISOString(),
+    });
 
-        // Load stats using RPC
-        const { data: statsData, error: statsError } = await supabase.rpc(
-          "get_user_stats",
-          { user_id_param: userId }
-        );
+    // Calculate stats
+    const userItems = itemsStore.getByUser(userId);
+    const userMatches = matchesStore.getByUser(userId);
+    const completedMatches = userMatches.filter(m => m.status === 'completed');
 
-        if (statsError) throw statsError;
-        if (statsData && statsData.length > 0) {
-          setStats(statsData[0]);
-        }
+    setStats({
+      total_items: userItems.length,
+      active_items: userItems.filter(i => i.is_active).length,
+      total_matches: userMatches.length,
+      completed_exchanges: completedMatches.length,
+      average_rating: 0,
+      total_value: userItems.reduce((sum, i) => sum + (i.estimated_value || 0), 0),
+      co2_saved: completedMatches.length * 2.5,
+    });
 
-        // Load exchange history (completed matches)
-        const { data: matchesData, error: matchesError } = await supabase
-          .from("matches")
-          .select(`
-            id,
-            created_at,
-            status,
-            item1:items!matches_item1_id_fkey(title),
-            item2:items!matches_item2_id_fkey(title)
-          `)
-          .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
-          .eq("status", "completed")
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (!matchesError && matchesData) {
-          setHistory(
-            matchesData.map((match: any) => ({
-              id: match.id,
-              created_at: match.created_at,
-              item1_title: match.item1?.title || "Objet supprimé",
-              item2_title: match.item2?.title || "Objet supprimé",
-              status: match.status,
-            }))
-          );
-        }
-      } catch (error) {
-        console.error("Error loading user data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUserData();
+    setLoading(false);
   }, [userId, navigate]);
 
   if (loading) {
@@ -222,7 +176,7 @@ const PublicDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Number(stats.co2_saved).toFixed(1)} kg</div>
+              <div className="text-2xl font-bold">{stats.co2_saved.toFixed(1)} kg</div>
               <p className="text-xs text-muted-foreground">
                 Impact écologique
               </p>
@@ -237,7 +191,7 @@ const PublicDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Number(stats.total_value).toFixed(0)} €</div>
+              <div className="text-2xl font-bold">{stats.total_value.toFixed(0)} €</div>
               <p className="text-xs text-muted-foreground">
                 Objets proposés
               </p>
@@ -260,30 +214,9 @@ const PublicDashboard = () => {
                 <CardTitle>Échanges réussis</CardTitle>
               </CardHeader>
               <CardContent>
-                {history.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Aucun échange complété pour le moment
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {history.map((exchange) => (
-                      <div
-                        key={exchange.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium">
-                            {exchange.item1_title} ↔ {exchange.item2_title}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(exchange.created_at).toLocaleDateString("fr-FR")}
-                          </p>
-                        </div>
-                        <Badge variant="secondary">Complété</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <p className="text-center text-muted-foreground py-8">
+                  Aucun échange complété pour le moment (mode démo)
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
