@@ -1,5 +1,6 @@
 name: Build demo
 
+# Déclenche le build à chaque push sur la branche main
 on:
   push:
     branches:
@@ -10,24 +11,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      # Étape 1 : récupérer le repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Étape 2 : installer Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
+      # Étape 3 : installer les dépendances en contournant le conflit
       - name: Install dependencies
-  run: npm install --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
+      # Étape 4 : builder le projet
       - name: Build project
         run: npm run build
 
-      - name: Upload site
+      # Étape 5 : sauvegarder le dossier build/dist
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: site-build
           path: |
             dist
             build
+
