@@ -5,10 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Package } from "lucide-react";
-import { signUpSchema, signInSchema } from "@/lib/validations";
+import { auth } from "@/lib/localStore";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -24,42 +23,21 @@ const Auth = () => {
     const password = formData.get("password") as string;
     const fullName = formData.get("fullName") as string;
 
-    // Validate input
-    const validation = signUpSchema.safeParse({ email, password, fullName });
-    if (!validation.success) {
-      setIsLoading(false);
+    try {
+      auth.signUp(email, password, fullName);
       toast({
-        title: "Erreur de validation",
-        description: validation.error.errors[0].message,
-        variant: "destructive",
+        title: "Inscription réussie!",
+        description: "Bienvenue sur TradeIt !",
       });
-      return;
-    }
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-        emailRedirectTo: `${window.location.origin}/`,
-      },
-    });
-
-    setIsLoading(false);
-
-    if (error) {
+      navigate("/");
+    } catch (error: any) {
       toast({
         title: "Erreur d'inscription",
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Inscription réussie!",
-        description: "Vous pouvez maintenant vous connecter.",
-      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -71,33 +49,21 @@ const Auth = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    // Validate input
-    const validation = signInSchema.safeParse({ email, password });
-    if (!validation.success) {
-      setIsLoading(false);
+    try {
+      auth.signIn(email, password);
       toast({
-        title: "Erreur de validation",
-        description: validation.error.errors[0].message,
-        variant: "destructive",
+        title: "Connexion réussie",
+        description: "Bon retour parmi nous !",
       });
-      return;
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setIsLoading(false);
-
-    if (error) {
+      navigate("/");
+    } catch (error: any) {
       toast({
         title: "Erreur de connexion",
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      navigate("/");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -189,7 +155,7 @@ const Auth = () => {
                       name="password"
                       type="password"
                       required
-                      minLength={8}
+                      minLength={6}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -200,6 +166,10 @@ const Auth = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          Version démo - Les données sont stockées localement
+        </p>
       </div>
     </div>
   );

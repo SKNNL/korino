@@ -1,22 +1,19 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, MapPin, FileText, ArrowLeft, Camera, Upload } from "lucide-react";
+import { User, MapPin, FileText, ArrowLeft } from "lucide-react";
 import Header from "@/components/Header";
-import { profileSchema } from "@/lib/validations";
+import { auth } from "@/lib/localStore";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState({
     full_name: "",
     avatar_url: "",
@@ -28,133 +25,27 @@ const Profile = () => {
     loadProfile();
   }, []);
 
-  const loadProfile = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        setProfile({
-          full_name: data.full_name || "",
-          avatar_url: data.avatar_url || "",
-          bio: data.bio || "",
-          location: data.location || "",
-        });
-      }
-    } catch (error) {
-      console.error("Error loading profile:", error);
+  const loadProfile = () => {
+    const user = auth.getCurrentUser();
+    if (!user) {
+      navigate("/auth");
+      return;
     }
-  };
 
-  const uploadAvatar = async (file: File) => {
-    try {
-      setUploading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Math.random()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-
-      setProfile({ ...profile, avatar_url: data.publicUrl });
-
-      toast({
-        title: "Photo uploadée",
-        description: "Votre photo de profil a été uploadée avec succès.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'uploader la photo.",
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Fichier trop volumineux",
-          description: "La taille maximale est de 5 MB.",
-          variant: "destructive",
-        });
-        e.target.value = ""; // Reset input
-        return;
-      }
-
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: "Format non supporté",
-          description: "Seuls les formats JPEG, PNG et WebP sont acceptés.",
-          variant: "destructive",
-        });
-        e.target.value = ""; // Reset input
-        return;
-      }
-
-      uploadAvatar(file);
-    }
+    setProfile({
+      full_name: user.full_name || "",
+      avatar_url: user.avatar_url || "",
+      bio: user.bio || "",
+      location: user.location || "",
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Validate form data
-    const validation = profileSchema.safeParse(profile);
-    if (!validation.success) {
-      setLoading(false);
-      toast({
-        title: "Erreur de validation",
-        description: validation.error.errors[0].message,
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
-          bio: profile.bio,
-          location: profile.location,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-
-      if (error) throw error;
-
+      auth.updateProfile(profile);
       toast({
         title: "Profil mis à jour",
         description: "Vos informations ont été enregistrées avec succès.",
@@ -188,37 +79,14 @@ const Profile = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-col items-center gap-4">
-              <div className="relative">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={profile.avatar_url} />
-                  <AvatarFallback>
-                    <User className="h-12 w-12" />
-                  </AvatarFallback>
-                </Avatar>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  className="absolute bottom-0 right-0 rounded-full"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  {uploading ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : (
-                    <Camera className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={profile.avatar_url} />
+                <AvatarFallback>
+                  <User className="h-12 w-12" />
+                </AvatarFallback>
+              </Avatar>
               <p className="text-sm text-muted-foreground">
-                Cliquez sur l'icône pour changer votre photo
+                Avatar généré automatiquement
               </p>
             </div>
 

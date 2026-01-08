@@ -1,28 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Calendar, MapPin } from "lucide-react";
 import MatchChat from "@/components/MatchChat";
-
-interface Match {
-  id: string;
-  user1_id: string;
-  user2_id: string;
-  item1_id: string;
-  item2_id: string;
-  created_at: string;
-  status: string;
-  meeting_date?: string;
-  meeting_location?: string;
-}
+import { auth, matches as matchesStore, items as itemsStore, users as usersStore } from "@/lib/localStore";
 
 const Matches = () => {
   const [matches, setMatches] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState(auth.getCurrentUser());
   const [selectedMatch, setSelectedMatch] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -31,39 +19,36 @@ const Matches = () => {
     checkUser();
   }, []);
 
-  const checkUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+  const checkUser = () => {
+    const currentUser = auth.getCurrentUser();
+    if (!currentUser) {
       navigate("/auth");
       return;
     }
-    setUser(session.user);
-    loadMatches(session.user.id);
+    setUser(currentUser);
+    loadMatches(currentUser.id);
   };
 
-  const loadMatches = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("matches")
-      .select(`
-        *,
-        user1:profiles!matches_user1_id_fkey(id, full_name, avatar_url),
-        user2:profiles!matches_user2_id_fkey(id, full_name, avatar_url),
-        item1:items!matches_item1_id_fkey(id, title, image_url, description),
-        item2:items!matches_item2_id_fkey(id, title, image_url, description)
-      `)
-      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
-      .order("created_at", { ascending: false });
+  const loadMatches = (userId: string) => {
+    const allMatches = matchesStore.getByUser(userId);
+    
+    // Enrich matches with user and item data
+    const enrichedMatches = allMatches.map(match => {
+      const user1 = usersStore.getById(match.user1_id);
+      const user2 = usersStore.getById(match.user2_id);
+      const item1 = itemsStore.getById(match.item1_id);
+      const item2 = itemsStore.getById(match.item2_id);
 
-    if (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger vos matches",
-        variant: "destructive",
-      });
-      return;
-    }
+      return {
+        ...match,
+        user1: user1 || { id: match.user1_id, full_name: "Utilisateur", avatar_url: "" },
+        user2: user2 || { id: match.user2_id, full_name: "Utilisateur", avatar_url: "" },
+        item1: item1 || { id: match.item1_id, title: "Objet", image_url: "", description: "" },
+        item2: item2 || { id: match.item2_id, title: "Objet", image_url: "", description: "" },
+      };
+    });
 
-    setMatches(data || []);
+    setMatches(enrichedMatches);
   };
 
   if (selectedMatch) {

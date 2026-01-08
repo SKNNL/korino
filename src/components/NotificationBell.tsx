@@ -7,21 +7,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  link: string | null;
-  is_read: boolean;
-  created_at: string;
-}
+import { auth, notifications as notificationsStore, type Notification } from "@/lib/localStore";
 
 const NotificationBell = () => {
   const navigate = useNavigate();
@@ -30,67 +20,29 @@ const NotificationBell = () => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const setupNotifications = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (data) {
-        setNotifications(data);
-        setUnreadCount(data.filter((n) => !n.is_read).length);
-      }
-
-      // Subscribe to new notifications with user filter
-      const channel = supabase
-        .channel(`notifications-${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const newNotif = payload.new as Notification;
-            setNotifications((prev) => [newNotif, ...prev.slice(0, 9)]);
-            setUnreadCount((prev) => prev + 1);
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    };
-
-    setupNotifications();
+    loadNotifications();
+    // Poll for updates
+    const interval = setInterval(loadNotifications, 2000);
+    return () => clearInterval(interval);
   }, []);
 
-  const markAsRead = async (notificationId: string) => {
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("id", notificationId);
+  const loadNotifications = () => {
+    const user = auth.getCurrentUser();
+    if (!user) return;
 
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+    const allNotifications = notificationsStore.getByUser(user.id).slice(0, 10);
+    setNotifications(allNotifications);
+    setUnreadCount(allNotifications.filter(n => !n.is_read).length);
   };
 
-  const handleNotificationClick = async (notification: Notification) => {
+  const markAsRead = (notificationId: string) => {
+    notificationsStore.markAsRead(notificationId);
+    loadNotifications();
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
-      await markAsRead(notification.id);
+      markAsRead(notification.id);
     }
     if (notification.link) {
       navigate(notification.link);
@@ -98,21 +50,11 @@ const NotificationBell = () => {
     }
   };
 
-  const markAllAsRead = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    
+  const markAllAsRead = () => {
+    const user = auth.getCurrentUser();
     if (!user) return;
-
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false);
-
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    setUnreadCount(0);
+    notificationsStore.markAllAsRead(user.id);
+    loadNotifications();
   };
 
   return (
