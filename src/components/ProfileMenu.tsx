@@ -1,4 +1,4 @@
-import { User, Heart, Package, Settings, LogOut, BarChart3, Search } from "lucide-react";
+import { User, Heart, Package, Settings, LogOut, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,40 +10,39 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/localStore";
 
 const ProfileMenu = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState(auth.getCurrentUser());
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getUser();
+    // Poll for user changes
+    const interval = setInterval(() => {
+      setUser(auth.getCurrentUser());
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate("/auth");
-      toast({
-        title: "Déconnexion réussie",
-        description: "À bientôt !",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de se déconnecter.",
-        variant: "destructive",
-      });
-    }
+  const handleLogout = () => {
+    auth.signOut();
+    setUser(null);
+    navigate("/");
+    toast({
+      title: "Déconnexion réussie",
+      description: "À bientôt !",
+    });
   };
+
+  if (!user) {
+    return (
+      <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+        Connexion
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
@@ -53,13 +52,13 @@ const ProfileMenu = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 bg-popover">
-        <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
+        <DropdownMenuLabel>{user.full_name || "Mon compte"}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
           <User className="mr-2 h-4 w-4" />
           <span>Mon profil</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer" onClick={() => userId && navigate(`/dashboard/${userId}`)}>
+        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/dashboard/${user.id}`)}>
           <BarChart3 className="mr-2 h-4 w-4" />
           <span>Mon tableau de bord</span>
         </DropdownMenuItem>
@@ -70,10 +69,6 @@ const ProfileMenu = () => {
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/favorites")}>
           <Heart className="mr-2 h-4 w-4" />
           <span>Mes favoris</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/saved-searches")}>
-          <Search className="mr-2 h-4 w-4" />
-          <span>Mes recherches</span>
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/settings")}>
           <Settings className="mr-2 h-4 w-4" />

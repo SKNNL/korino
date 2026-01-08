@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import SearchModal from "./SearchModal";
 import ProfileMenu from "./ProfileMenu";
 import NotificationBell from "./NotificationBell";
-import { supabase } from "@/integrations/supabase/client";
+import { auth, notifications } from "@/lib/localStore";
 
 const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearchChange?: (query: string) => void } = {}) => {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -14,46 +14,25 @@ const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearc
 
   useEffect(() => {
     loadUnreadCount();
-    
-    // Subscribe to changes in interest_messages
-    const channel = supabase
-      .channel('interest_messages_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'interest_messages'
-        },
-        () => loadUnreadCount()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Poll for updates every 2 seconds (simulating realtime)
+    const interval = setInterval(loadUnreadCount, 2000);
+    return () => clearInterval(interval);
   }, []);
 
-  const loadUnreadCount = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("interest_messages")
-      .select("id", { count: "exact" })
-      .eq("receiver_id", user.id)
-      .eq("is_read", false);
-
-    if (!error && data) {
-      setUnreadCount(data.length);
+  const loadUnreadCount = () => {
+    const user = auth.getCurrentUser();
+    if (!user) {
+      setUnreadCount(0);
+      return;
     }
+    const count = notifications.getUnreadCount(user.id);
+    setUnreadCount(count);
   };
 
   const handleSearchSubmit = (query: string) => {
     if (onSearchChange) {
       onSearchChange(query);
       setSearchOpen(false);
-      // Scroll to items section
       const itemsSection = document.querySelector('section.container');
       itemsSection?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -92,7 +71,7 @@ const Header = ({ searchQuery, onSearchChange }: { searchQuery?: string; onSearc
               </Button>
             </Link>
             <NotificationBell />
-            <Link to="/interest-messages">
+            <Link to="/matches">
               <Button variant="ghost" size="icon" className="relative hover:bg-primary/10">
                 <MessageCircle className="h-5 w-5" />
                 {unreadCount > 0 && (
